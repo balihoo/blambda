@@ -7,7 +7,7 @@ setup(name='blambda',
       packages=['blambda'],
       entry_points={
           'console_scripts': [
-              'blambda = blambda.main:main',
+              'blambda = blambda.__main__:main',
           ]
       },
 )
