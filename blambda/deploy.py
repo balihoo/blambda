@@ -29,10 +29,14 @@ from .utils.findfunc import (
     all_remote_functions
 )
 
-class Globals(object):
-    events_client = boto3.client('events', region_name=config.region)
-    lambda_client = boto3.client('lambda', region_name=config.region)
-    iam_client = boto3.client('iam', region_name=config.region)
+clients = None
+class Clients(object):
+    def __init__(self):
+        self.cfg = config.load()
+        region = self.cfg.get('region')
+        self.events_client = boto3.client('events', region_name=region)
+        self.lambda_client = boto3.client('lambda', region_name=region)
+        self.iam_client = boto3.client('iam', region_name=region)
 
 def js_name(coffee_file):
     """ return the name of the provided file with the extension replaced by 'js'
@@ -135,8 +139,8 @@ def git_local_mods():
     return len([c for c in changes if len(c.strip()) > 0])
 
 def setup_schedule(fname, farn, role, schedule, dryrun):
-    events_client = Globals.events_client
-    lambda_client = Globals.lambda_client
+    events_client = clients.events_client
+    lambda_client = clients.lambda_client
 
     #cleanup
     rules = events_client.list_rule_names_by_target(TargetArn=farn)['RuleNames']
@@ -215,7 +219,7 @@ def publish(name, role, zipfile, options, dryrun):
         options (dict): AWS Lambda configuration options
         returns the arn of the new or updated function
     """
-    client = Globals.lambda_client
+    client = clients.lambda_client
 
     sha = git_sha()
     mods = "!" * git_local_mods()
@@ -294,42 +298,44 @@ def deploy(function_names, env, prefix, role_arn, dryrun=False):
                     with timed("setup role"):
                         role_arn = role_policy_upsert(function_name, manifest['permissions'], dryrun)
                     if not role_arn:
-                        role_arn = config.lambda_role
+                        role_arn = clients.cfg.get('role')
                         print(pRed("Setting permissions failed. Defaulting to {}".format(role_arn)))
                     else:
                         print(pGreen("Specific permissions set with role: {}".format(role_arn)))
                 else:
-                    role_arn = config.lambda_role
+                    role_arn = clients.cfg.get('role')
                     print(pMagenta("no explicit role arn found, defaulting to {}".format(role_arn)))
             else:
                 print(pMagenta("Explicit role arn found: {}".format(role_arn)))
 
+            if role_arn:
+                #Publishing
+                with timed("publish"):
+                    (fullname, arn) = publish(function_name, role_arn, zipfile, manifest['options'], dryrun)
+                os.remove(zipfile)
 
-            #Publishing
-            with timed("publish"):
-                (fullname, arn) = publish(function_name, role_arn, zipfile, manifest['options'], dryrun)
-            os.remove(zipfile)
+                #Schedule setup
+                if 'schedule' in manifest:
+                    with timed("schedule setup"):
+                        setup_schedule(fullname, arn, role_arn, manifest['schedule'], dryrun)
 
-            #Schedule setup
-            if 'schedule' in manifest:
-                with timed("schedule setup"):
-                    setup_schedule(fullname, arn, role_arn, manifest['schedule'], dryrun)
-
-            deployed.append(fname)
-            print("Success!\n")
+                deployed.append(fname)
+                print("Success!\n")
+            else:
+                print(pRed("No role to default to, deploy cancelled. Use blambda config role <some role> to set a default"))
         else:
-            print("*** WARNING: unable to find {} ***\n".format(fname))
+            print(pYellow("*** WARNING: unable to find {} ***\n".format(fname)))
     return set(deployed)
 
 def main(args=None):
     """ main function for the deployment script.
         Parses args, calls deploy, outputs success or failure
     """
-    print("cmd line: '{}'".format(" ".join(sys.argv)))
+    clients = Clients()
     parser = argparse.ArgumentParser("package and deploy lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
-    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=config.application)
-    parser.add_argument('--env', type=str, help='the environment this function will run in', default=config.environment)
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=clients.cfg.get('application', ''))
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default=clients.cfg.get('environment', ''))
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
     parser.add_argument('--dryrun', help='do not actually send anything to lambda', action='store_true')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
-from python.util.findfunc import who_needs_update
+from .utils.findfunc import who_needs_update
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("list functions that need updating")

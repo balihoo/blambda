@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 import argparse
-from python.util.findfunc import find_manifest, all_manifests
 import shutil
 import json
 import re
 import os
 from subprocess import check_output
 from concurrent.futures import ThreadPoolExecutor
-from python.util.base import pGreen, pRed, pBlue, spawn
+from .utils.base import pGreen, pRed, pBlue, spawn
+from .utils.findfunc import find_manifest, all_manifests
 
 rsha = re.compile("([a-z0-9]{40})\s+HEAD.*")
 
