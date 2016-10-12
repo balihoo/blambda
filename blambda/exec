@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+import boto3
+from botocore.exceptions import ClientError
+from botocore.client import Config as BotoConfig
+import json
+import argparse
+import os
+import subprocess
+import sys
+
+from python.util.findfunc import (
+  find_manifest,
+  split_path
+)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser("execute python lambda functions")
+    parser.add_argument('function_name', type=str, help='the base name of the function')
+    parser.add_argument('--payload', type=str, help='the payload function', default=None)
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default='fulfillment')
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default='dev')
+    parser.add_argument('--remote', help='run the function in lambda', action='store_true')
+    args = parser.parse_args()
+
+    payload = args.payload
+    if payload is None:
+        payload = sys.stdin.read()
+
+    if args.remote:
+        function_name = args.function_name
+        if args.prefix:
+            function_name = "{}_{}".format(args.prefix, function_name)
+        if args.env:
+            function_name = "{}_{}".format(function_name, args.env)
+
+        client = boto3.client(
+            'lambda',
+            region_name='us-east-1',
+            config=BotoConfig(
+                connect_timeout=10,
+                read_timeout=300)
+        )
+
+        response = client.invoke(
+            FunctionName=function_name,
+            Payload=payload.encode('utf-8')
+        )
+        if response['StatusCode'] == 200:
+            try:
+                payload = json.loads(response['Payload'].read())
+                print(json.dumps(payload, indent=4))
+            except:
+                print(response)
+        else:
+            print(response)
+    else:
+        name = args.function_name
+        if not os.path.exists(name):
+            path = find_manifest(name)
+        if path is None:
+            raise Exception(name + " not found")
+        group = os.path.basename(os.path.dirname(path))
+        (basedir, basename, ext) = split_path(path)
+
+        whole_name = basename
+        if group != basename and group != ".":
+            whole_name = "{}_{}".format(group, basename)
+        function_name = "{}_{}_{}".format(args.prefix.lower(), whole_name.lower(), args.env.lower())
+
+        payload = json.dumps(json.loads(payload))
+        script = ";".join([
+            "from {} import lambda_handler".format(basename),
+            "import json",
+            "payload = json.loads('{}')".format(payload),
+            "result = lambda_handler(payload, None)",
+            "print(json.dumps(result))"
+        ])
+        os.chdir(basedir)
+        response = subprocess.check_output(["python", "-c", script])
+        print(json.dumps(json.loads(response), indent=4))
+
