@@ -8,9 +8,9 @@ import subprocess
 import shutil
 from tempfile import NamedTemporaryFile
 
-from python.util.base import pGreen, pRed, pBlue, spawn
-from python.util.install import install_deps
-from python.util.findfunc import (
+from .utils.base import pGreen, pRed, pBlue, spawn
+from .utils.install import install_deps
+from .utils.findfunc import (
     find_manifest,
     split_path
 )
@@ -138,7 +138,7 @@ def run_from_ve(activate_script, fname):
     tmpfile.file.close()
     subprocess.call(tmpfile.name)
 
-if __name__ == '__main__':
+def main(args=None):
     parser = argparse.ArgumentParser("prepare development of python lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
     parser.add_argument('--nove', help='skip setting up a virtual environment', action='store_true')
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--clean', help='clean environment', action='store_true')
     parser.add_argument('--recursive', help=argparse.SUPPRESS, action='store_true')
     parser.add_argument('--file', type=str, help='filename containing function names')
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     fnames = args.function_names
     if args.file:
@@ -182,3 +182,6 @@ if __name__ == '__main__':
                     run_from_ve(activate_script, fname)
         else:
             print(pRed("unable to find {}".format(fname)))
+
+if __name__ == '__main__':
+    main()

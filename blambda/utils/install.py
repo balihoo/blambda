@@ -1,7 +1,7 @@
 import os
 import shutil
 import re
-from python.util.base import pGreen, pRed, pBlue, spawn
+from blambda.utils.base import pGreen, pRed, pBlue, spawn
 from concurrent.futures import ThreadPoolExecutor
 
 version_rex = re.compile("^[\w\.]+$")

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import print_function
 import boto3
 from botocore.exceptions import ClientError
@@ -9,10 +8,6 @@ import argparse
 import os
 import errno
 import sys
-from config import Config
-from python.util.base import pGreen, pRed, pBlue, pMagenta, spawn, timed
-from python.util.vpc import VpcInfo
-from python.util.iam import role_policy_upsert
 
 from subprocess import (
     call,
@@ -21,7 +16,13 @@ from subprocess import (
     PIPE
 )
 
-from python.util.findfunc import (
+import config
+
+from .utils.base import pGreen, pRed, pBlue, pMagenta, spawn, timed
+from .utils.vpc import VpcInfo
+from .utils.iam import role_policy_upsert
+
+from .utils.findfunc import (
     all_manifests,
     find_manifest,
     split_path,
@@ -29,9 +30,9 @@ from python.util.findfunc import (
 )
 
 class Globals(object):
-    events_client = boto3.client('events', region_name=Config.region)
-    lambda_client = boto3.client('lambda', region_name=Config.region)
-    iam_client = boto3.client('iam', region_name=Config.region)
+    events_client = boto3.client('events', region_name=config.region)
+    lambda_client = boto3.client('lambda', region_name=config.region)
+    iam_client = boto3.client('iam', region_name=config.region)
 
 def js_name(coffee_file):
     """ return the name of the provided file with the extension replaced by 'js'
@@ -199,7 +200,7 @@ def get_vpc_config(vpcid=None):
     for the configured region and environment. Returns it as a configuration
     that can be provided to Lambda.
     """
-    vpc_info = VpcInfo(Config.region, Config.env, vpcid)
+    vpc_info = VpcInfo(config.region, config.environment, vpcid)
     return {
         'SubnetIds': vpc_info.dmz_subnets,
         'SecurityGroupIds': vpc_info.security_groups
@@ -293,12 +294,12 @@ def deploy(function_names, env, prefix, role_arn, dryrun=False):
                     with timed("setup role"):
                         role_arn = role_policy_upsert(function_name, manifest['permissions'], dryrun)
                     if not role_arn:
-                        role_arn = Config.lambda_role
+                        role_arn = config.lambda_role
                         print(pRed("Setting permissions failed. Defaulting to {}".format(role_arn)))
                     else:
                         print(pGreen("Specific permissions set with role: {}".format(role_arn)))
                 else:
-                    role_arn = Config.lambda_role
+                    role_arn = config.lambda_role
                     print(pMagenta("no explicit role arn found, defaulting to {}".format(role_arn)))
             else:
                 print(pMagenta("Explicit role arn found: {}".format(role_arn)))
@@ -320,20 +321,20 @@ def deploy(function_names, env, prefix, role_arn, dryrun=False):
             print("*** WARNING: unable to find {} ***\n".format(fname))
     return set(deployed)
 
-def main():
+def main(args=None):
     """ main function for the deployment script.
         Parses args, calls deploy, outputs success or failure
     """
     print("cmd line: '{}'".format(" ".join(sys.argv)))
     parser = argparse.ArgumentParser("package and deploy lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
-    parser.add_argument('--prefix', type=str, help='the prefix for the function', default='fulfillment')
-    parser.add_argument('--env', type=str, help='the environment this function will run in', default=Config.env)
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=config.application)
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default=config.environment)
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
     parser.add_argument('--dryrun', help='do not actually send anything to lambda', action='store_true')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     fnames = args.function_names
     if args.file:

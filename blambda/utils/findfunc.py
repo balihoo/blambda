@@ -3,7 +3,7 @@ import glob
 import json
 import re
 from subprocess import check_output, CalledProcessError
-from python.util.base import pGreen, pRed, pBlue, pYellow, spawn
+from blambda.utils.base import pGreen, pRed, pBlue, pYellow, spawn
 import time
 
 try:
