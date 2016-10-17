@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./vesetup -d lambdave -p 2.7.10 -v 13.1.2
+./vesetup -d ${1} -p 2.7.10 -v 13.1.2
 source lambdave/activate
 pip install boto3
 

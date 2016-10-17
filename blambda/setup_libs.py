@@ -22,9 +22,11 @@ def make_local_activate(basedir, include_dir, clean=False):
         libdir (str): where to install pip packages
         clean (bool): whether to delete existing dirs first
     """
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    py_dir = os.path.join(this_dir, "python")
-    master_ve_dir = os.path.join(py_dir, "lambdave")
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    mkve_dir = os.path.join(this_dir, "mkve")
+    print(mkve_dir)
+    config_dir = os.path.abspath(os.path.join(os.path.expanduser('~'), '.config', 'blambda'))
+    master_ve_dir = os.path.join(config_dir, "lambdave")
     master_activate = os.path.abspath(os.path.join(master_ve_dir, "activate"))
     local_ve_dir = os.path.join(basedir, "ve_{}".format(os.path.basename(basedir)))
     include_dir = os.path.join(basedir, "lib")
@@ -44,8 +46,15 @@ def make_local_activate(basedir, include_dir, clean=False):
     #copy the base local ve, but update the activate file with the new path
     if not os.path.exists(local_ve_dir):
         if not os.path.exists(master_ve_dir):
-            print("no master lambda VE. Let me make that for you")
-            (r, s, e) = spawn("makeLambdaVE", workingDirectory=py_dir, show=True)
+            print("""Initial install of master lambda python virtual environment.
+            A clean python matching AWS lambda will be compiled for this system
+            Development packages for ssl, zlib, sqlite and zlib are recommended before doing this
+            This may take several minutes...
+            """)
+
+            if not os.path.exists(config_dir):
+                os.makedirs(config_dir)
+            (r, s, e) = spawn(os.path.join(mkve_dir,"makeLambdaVE '{}'".format(master_ve_dir)), workingDirectory=mkve_dir, show=True)
         pyexecpath = os.path.join(master_ve_dir, "python", "install", "bin", "python")
         vebasepath = os.path.join(master_ve_dir, "virtualenv", "src")
         versiondir = [p for p in os.listdir(vebasepath) if not p.endswith("tar.gz")][0]
