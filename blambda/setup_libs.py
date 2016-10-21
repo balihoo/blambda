@@ -139,7 +139,6 @@ def run_from_ve(activate_script, fname):
         tmp.write("#pip install --upgrade pip\n")
         tmp.write("pip install futures\n")
         tmp.write("pip install boto3\n")
-        tmp.write("pip install git+https://github.com/balihoo-gens/blambda.git@master --upgrade\n")
         tmp.write("echo now using blambda: $(which blambda)\n")
         tmp.write("blambda deps {} --recursive --ve -v\n".format(fname))
     #make the script executable

@@ -5,6 +5,7 @@ setup(name='blambda',
       description='Balihoo Command Line Tools for AWS Lambda function management',
       install_requires=['boto3'],
       packages=find_packages(exclude=['tests']),
+      package_data={'': ['mkve/*']},
       entry_points={
           'console_scripts': [
               'blambda = blambda.__main__:main',
