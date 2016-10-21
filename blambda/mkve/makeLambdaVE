@@ -4,5 +4,6 @@
 source ${1}/activate
 pip install boto3 --upgrade
 #install yoself! this should not refer to master, but to a pypi pkg
-pip install https://github.com/balihoo-gens/blambda/archive/master.zip --upgrade
+
+pip install git+https://github.com/balihoo-gens/blambda.git@master --upgrade
 echo "INSTALLED BLAMBDA IN VE"
