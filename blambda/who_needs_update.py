@@ -7,6 +7,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser("list functions that need updating")
     parser.add_argument('--file', type=str, help='filename to write output to')
     parser.add_argument('--env', type=str, help='dev or stage or something', default="dev")
+    parser.add_argument('--prefix', type=str, help='prefix for your functions', default="")
     parser.add_argument('-v', '--verbose', help='verbose output', action='store_true')
     args = parser.parse_args()
 

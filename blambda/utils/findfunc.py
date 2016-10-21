@@ -5,6 +5,7 @@ import re
 from subprocess import check_output, CalledProcessError
 from blambda.utils.base import pGreen, pRed, pBlue, pYellow, spawn
 import time
+from pprint import pprint
 
 try:
     import boto3
@@ -67,7 +68,7 @@ def all_remote_functions(region="us-east-1"):
     getfs()
     return functions
 
-def who_needs_update(root, env="dev", verbose=True):
+def who_needs_update(root, prefix="", env="", verbose=True):
     start = time.time()
     def vprint(msg):
         if verbose:
@@ -103,7 +104,7 @@ def who_needs_update(root, env="dev", verbose=True):
 
     releases = {}
     #filter for fulfillment_<fname>_dev
-    r = re.compile("fulfillment_([A-Za-z0-9_]+)_{}".format(env))
+    r = re.compile("{}.*([A-Za-z0-9_\-]+).*{}".format(prefix, env))
     dr = re.compile(".*\[SHA ([A-Za-z0-9]{7})[\]!].*")
     def sha_from_desc(dsc):
         m = dr.match(desc)

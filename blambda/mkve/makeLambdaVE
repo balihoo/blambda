@@ -1,6 +1,8 @@
 #!/bin/bash
 
-./vesetup -d ${1} -p 2.7.10 -v 13.1.2
-source lambdave/activate
-pip install boto3
-
+#./vesetup -d ${1} -p 2.7.10 -v 13.1.2
+source ${1}/activate
+pip install boto3 --upgrade
+#install yoself! this should not refer to master, but to a pypi pkg
+pip install https://github.com/balihoo-gens/blambda/archive/master.zip --upgrade
+echo "INSTALLED BLAMBDA IN VE"

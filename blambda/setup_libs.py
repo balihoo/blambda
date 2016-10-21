@@ -55,6 +55,7 @@ def make_local_activate(basedir, include_dir, clean=False):
             if not os.path.exists(config_dir):
                 os.makedirs(config_dir)
             (r, s, e) = spawn(os.path.join(mkve_dir,"makeLambdaVE '{}'".format(master_ve_dir)), workingDirectory=mkve_dir, show=True)
+
         pyexecpath = os.path.join(master_ve_dir, "python", "install", "bin", "python")
         vebasepath = os.path.join(master_ve_dir, "virtualenv", "src")
         versiondir = [p for p in os.listdir(vebasepath) if not p.endswith("tar.gz")][0]
@@ -95,16 +96,13 @@ def make_local_activate(basedir, include_dir, clean=False):
         raise OSError("virtual env python not found at {}".format(local_python))
     return (local_activate, local_python)
 
-def process_manifest(manifest_filename, basedir, clean, verbose=False):
+def process_manifest(manifest, basedir, clean, verbose=False):
     """ loads a manifest file, executes pre and post hooks and installs dependencies
     Args:
       manifest_filename (str): filename (+path) of the manifest
       basedir (str): directory to create the dependency dir under and execute hook commands in
       verbose (bool): inundates you with a deluge of information useful for investigating issues
     """
-    manifest = {}
-    with open(manifest_filename) as f:
-        manifest = json.load(f)
     for command in manifest.get('before setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
     if 'dependencies' in manifest:
@@ -136,11 +134,14 @@ def run_from_ve(activate_script, fname):
         tmp.write(". {}\n".format(activate_script))
         tmp.write("echo now using py: $(which python)\n")
         tmp.write("echo now using pip: $(which pip)\n")
+        tmp.write("echo now using blambda: $(which blambda)\n")
         #upgrading pip breaks the paths again
         tmp.write("#pip install --upgrade pip\n")
         tmp.write("pip install futures\n")
         tmp.write("pip install boto3\n")
-        tmp.write("{} {} --recursive\n".format(os.path.abspath(__file__), fname))
+        tmp.write("pip install https://github.com/balihoo-gens/blambda/archive/master.zip\n")
+        tmp.write("echo now using blambda: $(which blambda)\n")
+        tmp.write("blambda deps {} --recursive --ve -v\n".format(fname))
     #make the script executable
     os.chmod(tmp.name, 0777)
     tmpfile.file.close()
@@ -149,7 +150,7 @@ def run_from_ve(activate_script, fname):
 def main(args=None):
     parser = argparse.ArgumentParser("prepare development of python lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
-    parser.add_argument('--nove', help='skip setting up a virtual environment', action='store_true')
+    parser.add_argument('--ve', help='set up a virtual environment', action='store_true')
     parser.add_argument('-v', '--verbose', help='verbose output', action='store_true')
     parser.add_argument('-c', '--clean', help='clean environment', action='store_true')
     parser.add_argument('--recursive', help=argparse.SUPPRESS, action='store_true')
@@ -170,17 +171,17 @@ def main(args=None):
         if manifest_filename:
             print(pBlue("setting up {}".format(fname)))
             (basedir, name, ext) = split_path(manifest_filename)
-            if args.nove or 'node' in basedir:
-                #setting up the libs in whatever env we're in
-                process_manifest(manifest_filename, basedir, args.clean, args.verbose)
-            else:
+            with open(manifest_filename) as f:
+                manifest = json.load(f)
+            runtime = manifest.get("runtime", "python")
+            if args.ve and "python" in runtime.lower():
                 incdir = os.path.join(basedir, "lib")
                 (activate_script, python_executable) = make_local_activate(basedir, incdir, args.clean)
                 if sys.executable == python_executable:
                     # already running in the right ve!
                     if args.verbose:
                         print("processing manifest from ve {}".format(activate_script))
-                    process_manifest(manifest_filename, basedir, args.clean, args.verbose)
+                    process_manifest(manifest, basedir, args.clean, args.verbose)
                 else:
                     if args.verbose:
                         print("no exec match: {} vs {}".format(sys.executable, python_executable))
@@ -188,6 +189,9 @@ def main(args=None):
                         raise Exception("Failed to enter virtual environment!")
                     print("entering ve")
                     run_from_ve(activate_script, fname)
+            else:
+                #setting up the libs in whatever env we're in
+                process_manifest(manifest, basedir, args.clean, args.verbose)
         else:
             print(pRed("unable to find {}".format(fname)))
 
