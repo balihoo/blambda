@@ -2,7 +2,18 @@
 Balihoo Lambda deploy tools
 
 ## installation
-`pip install git+https://github.com/balihoo-gens/blambda.git`
+```
+pip install git+https://github.com/balihoo-gens/blambda.git
+```
+
+## configuration
+First, make sure your AWS credentials are set up
+Then configure at least these two variables:
+```
+blambda config region us-east-1
+blambda config role 'arn:aws:iam::etcetera'
+```
+you can also set the variables 'application' and 'environment' which will automatically be prepended and appended to your function name. `my_function` would turn into `myapp_my_function_myenv` for example.
 
 ## create a new AWS Lambda function:
 `blambda new new_thing`
@@ -38,19 +49,32 @@ source files can be relative paths, and can be a tuple with (local, remote) name
 
 ## setting up your deps
 before deploying, your dependencies need to be installed. This is a separate step because you do not need to do this as often. For Python, you can choose to have them installed in/with whatever python environment you are in, or to set up an AWS Lambda equivalent 2.7 environment specifically for your function. The latter is convenient for local testing to avoid missing dependencies
-`blambda deps new_thing`
+```
+blambda deps new_thing
+```
 
 ## deploying your function
 Deploy sets up your lambda function as well as any IAM roles, CloudWatch Events schedules etc.
-`blambda deploy test_thing`
+```
+blambda deploy test_thing
+```
 
 ## running your function
 You can run your function right from the commandline
-`blambda exec test_thing`
+```
+blambda exec test_thing
+```
 will take a json payload from stdin, so
-`cat payload.json | blambda exec test_thing`
+```
+cat payload.json | blambda exec test_thing
+```
 will send the contents of `payload.json` to the deployed test_thing lambda function
-`blambda exec test_thing --payload '{ "my": "payload"}'`
+```
+blambda exec test_thing --payload '{ "my": "payload"}'
+```
 will do the same as:
-`echo '{ "my": "payload"}' | blambda exec test_thing --payload`
+```
+echo '{ "my": "payload"}' | blambda exec test_thing --payload
+```
+
 
