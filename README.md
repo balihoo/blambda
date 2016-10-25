@@ -18,6 +18,8 @@ you can also set the variables 'application' and 'environment' which will automa
 ## create a new AWS Lambda function:
 `blambda new new_thing`
 will get you a directory called 'new_thing' containing new_thing.py and new_thing.json
+you can provide`--runtime coffee` to create a new coffee script function.
+
 The json file is your manifest, which can look like:
 ```
 {
@@ -37,6 +39,10 @@ The json file is your manifest, which can look like:
           "Resource": "arn:aws:route53:::hostedzone/SAKJHAUHIS"
       }
     ],
+    "schedule": {
+        "input": { "things": "stuff" },
+        "rate": "1 minute"
+    },
     "source files": [
         "test_thing.py",
         "my_other_file.py"
@@ -48,10 +54,16 @@ you can add dependencies with an explicit version, and permissions as IAM statem
 source files can be relative paths, and can be a tuple with (local, remote) name, so you can pull in shared files
 
 ## setting up your deps
-before deploying, your dependencies need to be installed. This is a separate step because you do not need to do this as often. For Python, you can choose to have them installed in/with whatever python environment you are in, or to set up an AWS Lambda equivalent 2.7 environment specifically for your function. The latter is convenient for local testing to avoid missing dependencies
+before deploying, your dependencies need to be installed. This is a separate step because you do not need to do this as often.
 ```
 blambda deps new_thing
 ```
+
+For Python, you can choose to have them installed in/with whatever python environment you are in, or to set up an AWS Lambda equivalent 2.7 environment specifically for your function. The latter is convenient for local testing to avoid missing dependencies
+```
+blambda deps new_thing --ve
+```
+
 
 ## deploying your function
 Deploy sets up your lambda function as well as any IAM roles, CloudWatch Events schedules etc.
