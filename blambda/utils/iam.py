@@ -3,9 +3,10 @@ import json
 from copy import deepcopy
 from difflib import unified_diff
 from botocore.exceptions import ClientError
-from base import pRed
 from pprint import pprint
 import time
+
+from .base import pRed
 
 assume_role_policy = {
   "Version": "2012-10-17",
@@ -127,7 +128,7 @@ def role_policy_upsert(fname, policy_statement, dryrun):
             print("DRYRUN: did not update role policy")
         return role_arn
     except ClientError as e:
-        if 'AccessDenied' in e.message:
+        if 'AccessDenied' in str(e):
             print(pRed("ACCESS DENIED: unable to create roles/policies"))
             return None
         raise

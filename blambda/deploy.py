@@ -13,10 +13,11 @@ from subprocess import (
     call,
     check_output,
     Popen,
-    PIPE
+    PIPE,
+    CalledProcessError
 )
 
-import config
+from . import config
 
 from .utils.base import pGreen, pRed, pBlue, pMagenta, spawn, timed
 from .utils.vpc import VpcInfo
@@ -131,12 +132,18 @@ def package(manifest_filename, dryrun=False):
 
 def git_sha():
     """ get the current sha """
-    return check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
+    try:
+        return check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
+    except CalledProcessError:
+        return "no git sha"
 
 def git_local_mods():
     """ return the number of modified, added or deleted files beyond last commit """
-    changes = check_output(["git", "status", "-suno"]).strip().split('\n')
-    return len([c for c in changes if len(c.strip()) > 0])
+    try:
+        changes = check_output(["git", "status", "-suno"]).strip().split('\n')
+        return len([c for c in changes if len(c.strip()) > 0])
+    except CalledProcessError:
+        return 0
 
 def setup_schedule(fname, farn, role, schedule, dryrun):
     events_client = clients.events_client
@@ -331,6 +338,7 @@ def main(args=None):
     """ main function for the deployment script.
         Parses args, calls deploy, outputs success or failure
     """
+    global clients
     clients = Clients()
     parser = argparse.ArgumentParser("package and deploy lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')

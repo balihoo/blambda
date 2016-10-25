@@ -12,14 +12,15 @@ from .utils.findfunc import (
   split_path
 )
 
-import config
+from . import config
+cfg = config.load()
 
 def main(args=None):
     parser = argparse.ArgumentParser("execute python lambda functions")
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--payload', type=str, help='the payload function', default=None)
-    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=config.application)
-    parser.add_argument('--env', type=str, help='the environment this function will run in', default=config.environment)
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=cfg.get('application'))
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default=cfg.get('environment'))
     args = parser.parse_args(args)
 
     payload = args.payload

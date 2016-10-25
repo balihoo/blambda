@@ -142,7 +142,7 @@ def run_from_ve(activate_script, fname):
         tmp.write("echo now using blambda: $(which blambda)\n")
         tmp.write("blambda deps {} --recursive --ve -v\n".format(fname))
     #make the script executable
-    os.chmod(tmp.name, 0777)
+    os.chmod(tmp.name, stat.S_IXUSR)
     tmpfile.file.close()
     subprocess.call(tmpfile.name)
 

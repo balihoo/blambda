@@ -1,13 +1,19 @@
 import argparse
-import deploy
-import execute
-import setup_libs
-import update_versions
-import who_needs_update
-import config
+
+#local imports
+from . import (
+    new,
+    deploy,
+    execute,
+    setup_libs,
+    update_versions,
+    who_needs_update,
+    config,
+)
 
 def main():
     submap = {
+        'new': new,
         'deploy': deploy,
         'exec': execute,
         'execute': execute,
@@ -18,7 +24,7 @@ def main():
         'who_needs_update': who_needs_update,
         'who-needs-update': who_needs_update,
         'stale': who_needs_update,
-        'config': config
+        'config': config,
     }
 
     parser = argparse.ArgumentParser("Balihoo Command Line Tools for AWS Lambda function management")
