@@ -80,12 +80,14 @@ def process_manifest(manifest, overrides, only):
     with open(manifest) as f:
         data = json.load(f)
     get_version = None
-    if "node" in manifest:
+    runtime = data.get('options', {}).get('Runtime', "")
+    if "node" in runtime:
         get_version = get_node_version
-    elif "python" in manifest:
+    elif "python" in runtime:
         get_version = get_py_version
     else:
-        print("unable to determine language for {}".format(manifest))
+        print(pRed("unable to determine runtime language f or {}".format(manifest)))
+        print("Make sure the manifest contains options/Runtime")
         return
 
     #update the deps in place
@@ -120,7 +122,7 @@ def update_function(fname, overrides, only):
     except Exception as e:
         print(e)
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser("update the versions for the specified lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base names of the lambda functions')
     parser.add_argument('--allpy', action='store_true', help='update all python functions')
@@ -129,13 +131,13 @@ def main():
     parser.add_argument('--file', type=str, help='filename containing lambda function names')
     parser.add_argument('--override', type=str, help='filename of a json file containing the dependency section of a manifest to use instead of the latest versions')
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     fnames = []
     if args.allpy:
-        fnames = all_manifests("python/src")
+        fnames = [name for name in all_manifests() if "python" in get_runtime(name)]
     elif args.allnode:
-        fnames = all_manifests("node/src")
+        fnames = [name for name in all_manifests() if "node" in get_runtime(name)]
     elif args.file:
         with open(args.file) as f:
             fnames = [l.strip() for l in f.readlines()]
@@ -155,5 +157,3 @@ def main():
     with ThreadPoolExecutor(max_workers=32) as tpx:
         tpx.map(lambda fname: update_function(fname, overrides, args.only), fnames)
 
-if __name__ == '__main__':
-    main()

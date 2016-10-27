@@ -3,6 +3,7 @@ import sys
 from subprocess import *
 from contextlib import contextmanager
 import time
+import json
 
 red = '\033[1;31m'
 grn = '\033[1;32m'
@@ -71,4 +72,12 @@ def timed(tag):
     t = time.time()
     yield
     print("{}: {}s".format(tag, time.time()-t))
+
+def json_filedump(name, obj):
+    with open(name, 'w') as f:
+        json.dump(obj, f, sort_keys=True, indent=2)
+
+def json_fileload(name):
+    with open(name) as f:
+        return json.load(f)
 

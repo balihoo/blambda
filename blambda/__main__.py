@@ -9,6 +9,7 @@ from . import (
     update_versions,
     who_needs_update,
     config,
+    cwlogs
 )
 
 def main():
@@ -16,18 +17,17 @@ def main():
         'new': new,
         'deploy': deploy,
         'exec': execute,
-        'execute': execute,
         'deps': setup_libs,
-        'setup_libs': setup_libs,
-        'update_versions': update_versions,
         'update-versions': update_versions,
-        'who_needs_update': who_needs_update,
-        'who-needs-update': who_needs_update,
         'stale': who_needs_update,
         'config': config,
+        'logs': cwlogs,
     }
 
-    parser = argparse.ArgumentParser("Balihoo Command Line Tools for AWS Lambda function management")
+    parser = argparse.ArgumentParser(
+        "Balihoo Command Line Tools for AWS Lambda function management",
+        add_help=False
+    )
     parser.add_argument('task', choices=submap.keys())
     args, sub_args = parser.parse_known_args()
 

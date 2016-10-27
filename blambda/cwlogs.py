@@ -2,6 +2,7 @@
 
 import sys
 import boto3
+from botocore.exceptions import ClientError
 import time
 import argparse
 import re
@@ -18,6 +19,7 @@ from botocore.client import Config as BotoConfig
 from concurrent.futures import ThreadPoolExecutor
 import itertools
 from pprint import pprint
+from .utils.base import pGreen, pRed, pBlue, pMagenta, spawn, timed
 
 client = boto3.client(
     'logs',
@@ -42,11 +44,17 @@ def get_streams(log_group, from_ms, to_ms, quiet=False):
     common = "".join([fds[i] for i in range(minlen) if fds[i] == tds[i]])
     if not quiet:
         print("getting streams with prefix {}".format(common))
-    response = client.describe_log_streams(
-        logGroupName=log_group,
-        logStreamNamePrefix=common
-    )
-    return [stream['logStreamName'] for stream in response['logStreams']]
+    try:
+        response = client.describe_log_streams(
+            logGroupName=log_group,
+            logStreamNamePrefix=common
+        )
+        return [stream['logStreamName'] for stream in response['logStreams']]
+    except ClientError as ce:
+        if "ResourceNotFound" in str(ce):
+            print(pRed("{} not found in cloudwatch".format(log_group)))
+            return []
+        raise
 
 def get_events(log_group, stream, from_ms, to_ms, quiet=False):
     events = client.get_log_events(
@@ -99,7 +107,7 @@ def parse_time(t):
 def summarize(executions, parallelism_map):
     excount = len(executions)
     if excount > 0:
-        exectimes = [e["END"] - e["START"] for i, e in executions.iteritems() if "END" in e and "START" in e]
+        exectimes = [e["END"] - e["START"] for i, e in executions.items() if "END" in e and "START" in e]
         if exectimes:
             hist = histogram(exectimes, 50)
             total = float(sum(exectimes))
@@ -159,7 +167,7 @@ def analyze(events, json_output, summary_only, no_headers, human_times):
                 print("{}: {}".format(t, data))
     return (executions, parallelism_map)
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser("get cloudwatch log events for a lambda function. Json output can be fed into tools like decider/dec_stats")
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--prefix', type=str, help='the prefix for the function', default='fulfillment')
@@ -173,7 +181,7 @@ def main():
     parser.add_argument('-t', '--to', type=str, help='end time', default="0")
     parser.add_argument('-i', '--infile', type=str, help='read events from file')
     parser.add_argument('-o', '--outfile', type=str, help='save events to file')
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     log_group = "/aws/lambda/{}_{}_{}".format(args.prefix, args.function_name, args.env)
 
@@ -207,6 +215,3 @@ def main():
 
     if args.json and not args.summary:
         print("{}]")
-
-if __name__ == '__main__':
-    main()
