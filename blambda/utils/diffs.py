@@ -92,7 +92,7 @@ def potentials_from_file(filename):
         potential_mfts += potential_manifests(name)
     return (shafuncs, [], potential_mfts)
 
-def who_needs_update(root, env="dev", from_sha_file=None, to_sha_file=None, show_diffs=False, verbose=True):
+def who_needs_update(root, env="", from_sha_file=None, to_sha_file=None, show_diffs=False, verbose=True):
     def vprint(msg):
         if verbose:
             print(msg)

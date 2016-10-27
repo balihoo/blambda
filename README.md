@@ -54,3 +54,17 @@ will send the contents of `payload.json` to the deployed test_thing lambda funct
 will do the same as:
 `echo '{ "my": "payload"}' | blambda exec test_thing --payload`
 
+## Seeing the logs
+```
+blambda logs new_thing
+```
+will get you the cloudwatch log messages (== function stdout) from your function for recent executions. logs has many options, that you can see with `blambda logs --help`. In short, you can specify different output formattings, summary and date/time range
+
+## stale functions
+Sometimes, you forget what is deployed in lambda and how far out of date it is with your current repo.
+Blambda can help you with this by asking it to check for 'stale' functions:
+```
+blambda stale
+```
+will tell you which functions are out of date compared to the current repo HEAD.
+Supplying the -v (verbose) option will also tell you which files are out of date.
