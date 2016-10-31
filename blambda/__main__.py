@@ -3,6 +3,7 @@ import argparse
 #local imports
 from . import (
     new,
+    show,
     deploy,
     execute,
     setup_libs,
@@ -22,6 +23,7 @@ def main():
         'stale': who_needs_update,
         'config': config,
         'logs': cwlogs,
+        'show': show
     }
 
     parser = argparse.ArgumentParser(

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import argparse
 import os
 from .utils.diffs import who_needs_update

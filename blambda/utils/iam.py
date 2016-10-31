@@ -103,7 +103,8 @@ def role_policy_upsert(fname, policy_statement, dryrun):
                 # something does not happen right away
                 time.sleep(1)
             else:
-                print("no permissions defined; not creating policy")
+                print("no permissions defined; implementing a no-permission policy")
+                desired_policy = mk_policy(no_permission_policy)
         else:
             print("found policy:")
             if not desired_policy:

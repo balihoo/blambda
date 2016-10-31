@@ -38,24 +38,32 @@ def find_manifests(pkgnames, verbose=True):
 
 def get_runtime(fname):
     manifest_file = find_manifest(fname)
-    
-def is_manifest(path, verbose=True):
+
+def is_manifest(path, verbose=True, raise_on_bad_json=False):
     try:
         #hacky exclusions of files over 10k
         if os.path.getsize(path) < 10000:
             with open(path) as f:
-                return json.load(f).get('blambda') == "manifest"
-    except Exception as e:
+                try:
+                    manifest = json.load(f)
+                except ValueError as e:
+                    msg = "{} is not valid json: {}".format(path, e)
+                    if raise_on_bad_json:
+                        raise Exception(msg)
+                    elif verbose:
+                        print(pRed(msg))
+                return type(manifest) == dict and manifest.get('blambda') == "manifest"
+    except OSError as e:
         if verbose:
-            print(pYellow("Failed to check manifest for file {}\n\tREASON: {}".format(path, e)))
+            print(pRed("unhandled exception processing {}".format(path)))
     return False
 
-def all_manifests(srcdir):
+def all_manifests(srcdir, verbose=0):
     """ find all paths containing a package file """
     paths = all_json_files(srcdir)
     manifests = []
     for path in paths:
-        if is_manifest(path):
+        if is_manifest(path, verbose=verbose, raise_on_bad_json=True):
             manifests.append(split_path(path)[1])
     return sorted(manifests)
 
