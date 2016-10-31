@@ -44,6 +44,7 @@ def is_manifest(path, verbose=True, raise_on_bad_json=False):
         #hacky exclusions of files over 10k
         if os.path.getsize(path) < 10000:
             with open(path) as f:
+                manifest = None
                 try:
                     manifest = json.load(f)
                 except ValueError as e:
