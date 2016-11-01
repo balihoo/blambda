@@ -19,7 +19,7 @@ from subprocess import (
 
 from . import config
 
-from .utils.base import pGreen, pRed, pBlue, pMagenta, spawn, timed
+from .utils.base import pGreen, pRed, pBlue, pMagenta, pYellow, spawn, timed
 from .utils.vpc import VpcInfo
 from .utils.iam import role_policy_upsert
 
