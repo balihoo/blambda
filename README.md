@@ -3,7 +3,7 @@ Balihoo Lambda deploy tools
 
 ## installation
 ```
-pip install git+https://github.com/balihoo-gens/blambda.git
+pip install git+https://github.com/balihoo/blambda.git
 ```
 
 ## configuration
