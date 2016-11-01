@@ -34,10 +34,10 @@ clients = None
 class Clients(object):
     def __init__(self):
         self.cfg = config.load()
-        region = self.cfg.get('region', 'us-east-1')
-        self.events_client = boto3.client('events', region_name=region)
-        self.lambda_client = boto3.client('lambda', region_name=region)
-        self.iam_client = boto3.client('iam', region_name=region)
+        self.region = self.cfg.get('region', 'us-east-1')
+        self.events_client = boto3.client('events', region_name=self.region)
+        self.lambda_client = boto3.client('lambda', region_name=self.region)
+        self.iam_client = boto3.client('iam', region_name=self.region)
 
 def js_name(coffee_file):
     """ return the name of the provided file with the extension replaced by 'js'
