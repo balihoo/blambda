@@ -6,11 +6,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 version_rex = re.compile("^[\w\.]+$")
 
-def install_deps(dependencies, basedir, version_required=True, clean=False, verbose=False):
+def str_types():
+    try:
+        return (str, unicode)
+    except NameError:
+        return (str,)
+
+def install_deps(dependencies, basedir, runtime, version_required=True, clean=False, verbose=False):
     """ installs node and python packages """
     if version_required:
         def valid_version(v):
-            return type(v) in (str, unicode) and version_rex.match(v)
+            return type(v) in str_types() and version_rex.match(v)
         bad_Version = [dep for dep in dependencies if not valid_version(dependencies[dep])]
         if len(bad_Version) > 0:
             print(pRed("\nExact version required for: {}".format(", ".join(bad_Version))))
@@ -19,7 +25,7 @@ def install_deps(dependencies, basedir, version_required=True, clean=False, verb
     deps_to_install = {d: v for (d,v) in dependencies.items() if not v == "skip"}
 
     install = None
-    if "node" in basedir:
+    if "node" in runtime:
         # NPM has race condition problems when installing multiple versions of the same dep
         install_concurrency = 1
         moddir = os.path.join(basedir, "node_modules")
@@ -27,9 +33,9 @@ def install_deps(dependencies, basedir, version_required=True, clean=False, verb
             shutil.rmtree(moddir)
         if not os.path.exists(moddir):
             os.mkdir(moddir)
-
         install = lambda args: npm_install(args[0], args[1], basedir)
-    elif "python" in basedir:
+
+    elif "python" in runtime:
         install_concurrency = 32
         libdir = os.path.join(basedir, "lib")
         if os.path.exists(libdir) and clean:
@@ -38,7 +44,7 @@ def install_deps(dependencies, basedir, version_required=True, clean=False, verb
             os.mkdir(libdir)
         install = lambda args: pip_install(args[0], args[1], libdir)
     else:
-        raise Exception("unable to determine package manager for {}".format(basdir))
+        raise Exception("unable to determine package manager for {} ({})".format(basedir, runtime))
 
     with ThreadPoolExecutor(max_workers=install_concurrency) as tpx:
         results = list(tpx.map(install, deps_to_install.items()))

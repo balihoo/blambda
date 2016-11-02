@@ -14,7 +14,6 @@ from .utils.findfunc import (
     split_path
 )
 
-
 def make_local_activate(basedir, include_dir, clean=False):
     """ set up a base lambda ve if needed, copy it locally to have packages installed there
     Args:
@@ -106,7 +105,15 @@ def process_manifest(manifest, basedir, clean, verbose=False):
     for command in manifest.get('before setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
     if 'dependencies' in manifest:
-        good = install_deps(manifest['dependencies'], basedir, version_required=True, clean=clean, verbose=verbose)
+        runtime = manifest["options"]["Runtime"]
+        good = install_deps(
+            manifest['dependencies'],
+            basedir,
+            runtime,
+            version_required=True,
+            clean=clean,
+            verbose=verbose
+        )
         print(pGreen("All deps installed") if good else pRed("Failed to install one or more deps"))
         if not good:
             raise Exception("Failed to install one or more deps")
