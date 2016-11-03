@@ -10,10 +10,29 @@ pip install git+https://github.com/balihoo/blambda.git
 First, make sure your AWS credentials are set up
 Then configure at least these two variables:
 ```
-blambda config region us-east-1
-blambda config role 'arn:aws:iam::etcetera'
+blambda config set_global region us-east-1
+blambda config set_global role 'arn:aws:iam::etcetera'
 ```
+these will be set in `~/.config/blambda/config.json`
 you can also set the variables 'application' and 'environment' which will automatically be prepended and appended to your function name. `my_function` would turn into `myapp_my_function_myenv` for example.
+
+you can override these variables locally with
+```
+blambda config set_local region us-west-2
+```
+this will be set in `./.blambda/config.json`
+when config values are loaded by blambda, it first loads the global file and then overrides any values with the config from the current directory.
+
+you can see the value of variables with:
+```
+blambda config get <variable name>
+blambda config get all
+```
+
+variables can be unset by omitting the value:
+```
+blambda config set_local application
+```
 
 ## create a new AWS Lambda function:
 `blambda new new_thing`

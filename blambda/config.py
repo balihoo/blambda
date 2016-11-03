@@ -3,7 +3,7 @@ import json
 import argparse
 
 configfile=os.path.abspath(os.path.join(os.path.expanduser('~'), '.config', 'blambda', 'config.json'))
-configfile_local=os.path.abspath(os.path.join(os.get_cwd(), '.blambda', 'config.json'))
+configfile_local=os.path.abspath(os.path.join(os.getcwd(), '.blambda', 'config.json'))
 
 def save(var, val, local):
     cfg = load()
@@ -30,13 +30,13 @@ def load():
     if os.path.exists(configfile_local):
         with open(configfile_local) as f:
             config.update(json.load(f))
-     return config
+    return config
 
 def main(args=None):
     parser = argparse.ArgumentParser("configure blambda")
     parser.add_argument('action', choices=['set_local', 'set_global', 'get'])
-    parser.add_argument('variable', choices=['region', 'environment', 'role', 'application'])
-    parser.add_argument('value', type=str, help='the value to give to the variable', default=None)
+    parser.add_argument('variable', choices=['region', 'environment', 'role', 'application', 'all'])
+    parser.add_argument('value', type=str, help='the value to give to the variable', nargs='?')
     args = parser.parse_args(args)
     if args.action == 'set_local':
         save(args.variable, args.value, local=True)
@@ -44,7 +44,7 @@ def main(args=None):
         save(args.variable, args.value, local=False)
     else:
         for k, v in sorted(load().items()):
-            if args.value is None or k == args.value:
+            if args.variable in ('all', k):
                 print("{}: {}".format(k, v))
 
 if __name__ == '__main__':
