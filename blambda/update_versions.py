@@ -7,7 +7,7 @@ import os
 from subprocess import check_output
 from concurrent.futures import ThreadPoolExecutor
 from .utils.base import pGreen, pRed, pBlue, spawn
-from .utils.findfunc import find_manifest, all_manifests
+from .utils.findfunc import find_manifest, all_manifests, get_runtime
 
 rsha = re.compile("([a-z0-9]{40})\s+HEAD.*")
 
@@ -112,9 +112,9 @@ def process_manifest(manifest, overrides, only):
         with open(template_manifest, "w") as f:
             f.write(tt2data)
 
-def update_function(fname, overrides, only):
+def update_function(fname, overrides, only, find_manifest=False):
     try:
-        manifest = find_manifest(fname)
+        manifest = find_manifest(fname) if find_manifest else fname
         if manifest:
             process_manifest(manifest, overrides, only)
         else:
@@ -134,15 +134,16 @@ def main(args=None):
     args = parser.parse_args(args)
 
     fnames = []
-    if args.allpy:
-        fnames = [name for name in all_manifests() if "python" in get_runtime(name)]
-    elif args.allnode:
-        fnames = [name for name in all_manifests() if "node" in get_runtime(name)]
+    if args.allpy or args.allnode:
+        term = "python" if args.allpy else "node"
+        manifests = all_manifests(".", verbose=0, ignore_errors=True, full_paths=True)
+        fnames = [name for name in manifests if term in get_runtime(name)]
     elif args.file:
         with open(args.file) as f:
             fnames = [l.strip() for l in f.readlines()]
     else:
         fnames = args.function_names
+
     print("updating {} for {}".format(
         ', '.join(args.only) if args.only else 'all deps',
         ', '.join(fnames)
@@ -155,5 +156,5 @@ def main(args=None):
 
     fnames = set(fnames)
     with ThreadPoolExecutor(max_workers=32) as tpx:
-        tpx.map(lambda fname: update_function(fname, overrides, args.only), fnames)
+        tpx.map(lambda fname: update_function(fname, overrides, args.only, False), fnames)
 

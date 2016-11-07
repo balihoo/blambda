@@ -3,7 +3,7 @@ import glob
 import json
 import re
 from subprocess import check_output, CalledProcessError
-from blambda.utils.base import pGreen, pRed, pBlue, pYellow, spawn
+from blambda.utils.base import pGreen, pRed, pBlue, pYellow, spawn, json_fileload
 import time
 from pprint import pprint
 
@@ -36,8 +36,14 @@ def find_manifests(pkgnames, verbose=True):
         return jsonfile.endswith(ensure_json(pkg)) and is_manifest(jsonfile, verbose)
     return {p:j for p in pkgnames for j in jsonfiles if match(p,j)}
 
-def get_runtime(fname):
-    manifest_file = find_manifest(fname)
+def get_runtime(manifest_path):
+    try:
+        manifest = json_fileload(manifest_path)
+        if type(manifest) == dict:
+            return manifest.get('options').get('Runtime')
+    except ValueError as e:
+        msg = "{} is not valid json: {}".format(path, e)
+        print(pRed(msg))
 
 def is_manifest(path, verbose=True, raise_on_bad_json=False):
     try:
@@ -59,13 +65,16 @@ def is_manifest(path, verbose=True, raise_on_bad_json=False):
             print(pRed("unhandled exception processing {}".format(path)))
     return False
 
-def all_manifests(srcdir, verbose=0):
+def all_manifests(srcdir, verbose=0, ignore_errors=False, full_paths=False):
     """ find all paths containing a package file """
     paths = all_json_files(srcdir)
     manifests = []
     for path in paths:
-        if is_manifest(path, verbose=verbose, raise_on_bad_json=True):
-            manifests.append(split_path(path)[1])
+        if is_manifest(path, verbose=verbose, raise_on_bad_json=not ignore_errors):
+            if full_paths:
+                manifests.append(path)
+            else:
+                manifests.append(split_path(path)[1])
     return sorted(manifests)
 
 def all_remote_functions(region="us-east-1"):
