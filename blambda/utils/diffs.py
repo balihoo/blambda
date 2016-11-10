@@ -1,5 +1,7 @@
 import re
 import os
+import glob
+from pprint import pprint
 from .findfunc import find_manifests, all_remote_functions
 from .base import (
     spawn,
@@ -21,6 +23,9 @@ def needs_update(manifest, sha_from, sha_to, show_diff=False, verbose=False):
     files = json_fileload(manifest).get("source files", [])
     files = [f[0] if type(f) == list else f for f in files]
     files = [os.path.abspath(os.path.join(os.path.dirname(manifest), f)) for f in files]
+    files = [glob.glob(f) for f in files]
+    files = [f for fs in files for f in fs]
+
     #manifest won't be in the sources, but still instrumental
     files.append(manifest)
     #all of the sources are subject to being formed by tempfill.

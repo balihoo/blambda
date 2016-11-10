@@ -8,12 +8,11 @@ import argparse
 import os
 import errno
 import sys
+import glob
 
 from subprocess import (
     call,
     check_output,
-    Popen,
-    PIPE,
     CalledProcessError
 )
 
@@ -107,12 +106,7 @@ def package(manifest_filename, dryrun=False):
         print(pRed("WARNING! dependencies defined, but no dependency directory found."))
         print("  --> Be sure to run setup_libs prior to deploying\n")
 
-    for filename in manifest.get('source files', []):
-        srcname = dstname = filename
-        if type(filename) == list:
-            (srcname, dstname) = tuple(filename)
-
-        src = os.path.abspath(os.path.join(basedir, srcname))
+    def copy_source_file(source, destination_name):
         if src.endswith(".coffee"):
             compiled = coffee_compile(src)
             dst = os.path.abspath(os.path.join(tmpdir, fname, js_name(dstname)))
@@ -121,6 +115,23 @@ def package(manifest_filename, dryrun=False):
         else:
             dst = os.path.join(tmpdir, dstname)
             copy_with_dir(src,dst)
+
+    for filename in manifest.get('source files', []):
+        srcname = dstname = filename
+        if type(filename) == list:
+            (srcname, dstname) = tuple(filename)
+
+        src = os.path.abspath(os.path.join(basedir, srcname))
+        files = glob.glob(src)
+        if len(files) == 1:
+            copy_source_file(files[0], dstname)
+        elif len(files) > 1:
+            for f in files:
+                base_src = os.path.basename(f)
+                #dstname is assumed to be a dir here.
+                destination = os.path.join(dstname, base_src)
+                copy_source_file(f, destination)
+
     if 'options' in manifest:
         options.update(manifest['options'])
     manifest['options'] = options
@@ -133,15 +144,21 @@ def package(manifest_filename, dryrun=False):
 def git_sha():
     """ get the current sha """
     try:
-        return check_output(["git", "rev-parse", "--short", "HEAD"]).strip()
+        (ret, out, err) = spawn(["git", "rev-parse", "--short", "HEAD"])
+        if ret == 0:
+            return out[0]
+        return ' '.join(err)
     except CalledProcessError:
         return "no git sha"
 
 def git_local_mods():
     """ return the number of modified, added or deleted files beyond last commit """
     try:
-        changes = check_output(["git", "status", "-suno"]).strip().split('\n')
-        return len([c for c in changes if len(c.strip()) > 0])
+        (ret, out, err) = spawn(["git", "status", "-suno"])
+        if ret == 0:
+            return len([c for c in out if len(c.strip()) > 0])
+        print(pRed(' '.join(err)))
+        return 0
     except CalledProcessError:
         return 0
 

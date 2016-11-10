@@ -51,6 +51,9 @@ def spawn(cmd, show = False, workingDirectory = None, raise_on_fail=False):
             print(pRed(" [FAIL]"))
             print("\n".join(stderr + stdout), file=sys.stderr)
     if raise_on_fail and p.returncode != 0:
+        print(cmd)
+        print(stdout)
+        print(stderr)
         raise Exception("Spawning {} Failed:\n{}".format(cmd, "\n".join(stderr + stdout)))
     return (p.returncode, stdout, stderr)
 

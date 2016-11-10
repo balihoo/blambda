@@ -2,6 +2,7 @@ import sys
 import json
 import argparse
 import os
+import glob
 import stat
 import subprocess
 import shutil
@@ -104,7 +105,7 @@ def process_manifest(manifest, basedir, clean, verbose=False):
     """
     for command in manifest.get('before setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
-    if 'dependencies' in manifest:
+    if False and 'dependencies' in manifest:
         runtime = manifest["options"]["Runtime"]
         good = install_deps(
             manifest['dependencies'],
@@ -118,12 +119,29 @@ def process_manifest(manifest, basedir, clean, verbose=False):
         if not good:
             raise Exception("Failed to install one or more deps")
     for source in manifest['source files']:
+        #check for files that are to be moved and link them
         if type(source) in (tuple, list):
             (src, dst) = source
-            if not os.path.exists(os.path.join(basedir, dst)):
-                spawn("ln -s {} {}".format(src, dst), show=True, workingDirectory=basedir, raise_on_fail=True)
-            else:
-                print("Not (re)linking {} to {}, destination exists".format(src, dst))
+            (dest_dir, _) = os.path.split(dst)
+            if dest_dir:
+                try:
+                    os.makedirs(dest_dir)
+                except OSError:
+                    pass
+            #wildcards are allowed
+            files = glob.glob(src)
+            for srcf in files:
+                srcf = os.path.abspath(srcf)
+                dstf = os.path.join(dest_dir, os.path.basename(srcf))
+                if not os.path.exists(dstf):
+                    spawn(
+                        "ln -s {} {}".format(srcf, dstf),
+                        show=True,
+                        workingDirectory=basedir,
+                        raise_on_fail=True
+                    )
+                else:
+                    print("Not (re)linking {} to {}, destination exists".format(src, dst))
     for command in manifest.get('after setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
 
