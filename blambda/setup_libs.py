@@ -105,19 +105,22 @@ def process_manifest(manifest, basedir, clean, verbose=False):
     """
     for command in manifest.get('before setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
-    if False and 'dependencies' in manifest:
-        runtime = manifest["options"]["Runtime"]
-        good = install_deps(
-            manifest['dependencies'],
-            basedir,
-            runtime,
-            version_required=True,
-            clean=clean,
-            verbose=verbose
-        )
-        print(pGreen("All deps installed") if good else pRed("Failed to install one or more deps"))
-        if not good:
-            raise Exception("Failed to install one or more deps")
+
+    runtime = manifest["options"]["Runtime"]
+    for depsection in ('dependencies', 'dev_dependencies'):
+        if depsection in manifest:
+            good = install_deps(
+                manifest[depsection],
+                basedir,
+                runtime,
+                version_required=True,
+                clean=clean,
+                verbose=verbose
+            )
+            print(pGreen("All {} installed".format(depsection)) if good else pRed("Failed to install one or more deps"))
+            if not good:
+                raise Exception("Failed to install one or more deps")
+
     for source in manifest['source files']:
         #check for files that are to be moved and link them
         if type(source) in (tuple, list):

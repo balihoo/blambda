@@ -45,12 +45,13 @@ def js_name(coffee_file):
     """
     return "{}.js".format(os.path.splitext(coffee_file)[0])
 
-def coffee_compile(coffee_file):
+def coffee_compile(coffee_file, basedir):
     """ compile a coffee file and return the compiled file's name
     Args:
         coffee_file (str): name of a file to compile
     """
-    command = "coffee -bc {}".format(coffee_file)
+    compiler = os.path.join(basedir, "node_modules", "coffee-script", "bin", "coffee")
+    command = "{} -bc {}".format(compiler, coffee_file)
     (r,s,e) = spawn(command, show=True)
     return js_name(coffee_file)
 
@@ -107,14 +108,15 @@ def package(manifest_filename, dryrun=False):
         print("  --> Be sure to run setup_libs prior to deploying\n")
 
     def copy_source_file(source, destination_name):
-        if src.endswith(".coffee"):
-            compiled = coffee_compile(src)
-            dst = os.path.abspath(os.path.join(tmpdir, fname, js_name(dstname)))
-            copy_with_dir(compiled, dst)
-            os.remove(compiled)
-        else:
-            dst = os.path.join(tmpdir, dstname)
-            copy_with_dir(src,dst)
+        for src in glob.glob(source):
+            if src.endswith(".coffee"):
+                compiled = coffee_compile(src, basedir)
+                dst = os.path.abspath(os.path.join(tmpdir, fname, js_name(dstname)))
+                copy_with_dir(compiled, dst)
+                os.remove(compiled)
+            else:
+                dst = os.path.join(tmpdir, dstname)
+                copy_with_dir(src,dst)
 
     for filename in manifest.get('source files', []):
         srcname = dstname = filename
