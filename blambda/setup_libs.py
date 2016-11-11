@@ -135,7 +135,7 @@ def process_manifest(manifest, basedir, clean, verbose=False):
             files = glob.glob(src)
             for srcf in files:
                 srcf = os.path.abspath(srcf)
-                dstf = os.path.join(dest_dir, os.path.basename(srcf))
+                dstf = dst if len(files) == 1 else os.path.join(dest_dir, os.path.basename(srcf))
                 if not os.path.exists(dstf):
                     spawn(
                         "ln -s {} {}".format(srcf, dstf),
