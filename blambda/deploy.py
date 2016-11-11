@@ -146,7 +146,7 @@ def package(manifest_filename, dryrun=False):
 def git_sha():
     """ get the current sha """
     try:
-        (ret, out, err) = spawn(["git", "rev-parse", "--short", "HEAD"])
+        (ret, out, err) = spawn("git rev-parse --short HEAD", show=True)
         if ret == 0:
             return out[0]
         return ' '.join(err)
@@ -156,7 +156,7 @@ def git_sha():
 def git_local_mods():
     """ return the number of modified, added or deleted files beyond last commit """
     try:
-        (ret, out, err) = spawn(["git", "status", "-suno"])
+        (ret, out, err) = spawn("git status -suno", show=True)
         if ret == 0:
             return len([c for c in out if len(c.strip()) > 0])
         print(pRed(' '.join(err)))
