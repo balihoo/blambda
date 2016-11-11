@@ -111,11 +111,11 @@ def package(manifest_filename, dryrun=False):
         for src in glob.glob(source):
             if src.endswith(".coffee"):
                 compiled = coffee_compile(src, basedir)
-                dst = os.path.abspath(os.path.join(tmpdir, fname, js_name(dstname)))
+                dst = os.path.abspath(os.path.join(tmpdir, fname, js_name(destination_name)))
                 copy_with_dir(compiled, dst)
                 os.remove(compiled)
             else:
-                dst = os.path.join(tmpdir, dstname)
+                dst = os.path.join(tmpdir, destination_name)
                 copy_with_dir(src,dst)
 
     for filename in manifest.get('source files', []):
@@ -130,8 +130,8 @@ def package(manifest_filename, dryrun=False):
         elif len(files) > 1:
             for f in files:
                 base_src = os.path.basename(f)
-                #dstname is assumed to be a dir here.
-                destination = os.path.join(dstname, base_src)
+                (dest_dir, _) = os.path.split(dstname)
+                destination = os.path.join(dest_dir, base_src)
                 copy_source_file(f, destination)
 
     if 'options' in manifest:
