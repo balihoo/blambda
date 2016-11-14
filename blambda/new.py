@@ -55,7 +55,8 @@ def main(args=None):
         handler_path = filename
         manifest_path = "{}.json".format(fname)
     else:
-        os.makedirs(fname, exist_ok=True)
+        if not os.path.exists(fname):
+            os.makedirs(fname)
         handler_path = os.path.join(fname, filename)
         manifest_path = os.path.join(fname, "{}.json".format(fname))
 
