@@ -107,7 +107,7 @@ def process_manifest(manifest, basedir, clean, verbose=False):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
 
     runtime = manifest["options"]["Runtime"]
-    for depsection in ('dependencies', 'dev_dependencies'):
+    for depsection in ('dependencies', 'dev_dependencies', 'dev dependencies'):
         if depsection in manifest:
             good = install_deps(
                 manifest[depsection],
