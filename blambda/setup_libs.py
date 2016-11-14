@@ -125,14 +125,19 @@ def process_manifest(manifest, basedir, clean, verbose=False):
         #check for files that are to be moved and link them
         if type(source) in (tuple, list):
             (src, dst) = source
+            src = os.path.abspath(os.path.join(basedir, src))
             (dest_dir, _) = os.path.split(dst)
+            dst = os.path.abspath(os.path.join(basedir, dst))
             if dest_dir:
+                dest_dir = os.path.abspath(os.path.join(basedir, dest_dir))
                 try:
                     os.makedirs(dest_dir)
                 except OSError:
                     pass
             #wildcards are allowed
             files = glob.glob(src)
+            if len(files) == 0:
+                print("no glob for {}".format(src))
             for srcf in files:
                 srcf = os.path.abspath(srcf)
                 dstf = dst if len(files) == 1 else os.path.join(dest_dir, os.path.basename(srcf))
@@ -144,7 +149,7 @@ def process_manifest(manifest, basedir, clean, verbose=False):
                         raise_on_fail=True
                     )
                 else:
-                    print("Not (re)linking {} to {}, destination exists".format(src, dst))
+                    print("Not (re)linking {} to {}, destination exists".format(srcf, dstf))
     for command in manifest.get('after setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
 
