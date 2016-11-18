@@ -19,7 +19,7 @@ def main():
         'deploy': deploy,
         'exec': execute,
         'deps': setup_libs,
-        'update-versions': update_versions,
+        'update': update_versions,
         'stale': who_needs_update,
         'config': config,
         'logs': cwlogs,

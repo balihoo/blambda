@@ -4,6 +4,8 @@ import shutil
 import json
 import re
 import os
+import requests
+from distutils.version import LooseVersion
 from subprocess import check_output
 from concurrent.futures import ThreadPoolExecutor
 from .utils.base import pGreen, pRed, pBlue, spawn
@@ -15,15 +17,10 @@ def get_git_version(giturl):
     shas = check_output(['git', 'ls-remote', giturl[4:]])
     return rsha.match(shas).groups()[0]
 
-def get_pip_version(package):
-    packages = check_output(['pip', 'search', package]).split('\n')
-    rpkg = re.compile("^{}\s\((.*)\)\s+\-\s.*".format(package))
-    def version(line):
-        try:
-            return rpkg.match(line).groups()[0]
-        except:
-            return False
-    return [v for v in [version(p) for p in packages] if v][0]
+def get_pip_version(package_name):
+    url = "https://pypi.python.org/pypi/{}/json".format(package_name)
+    data = requests.get(url).json()
+    return sorted(list(data["releases"].keys()), key=LooseVersion, reverse=True)[0]
 
 def get_py_version(dep):
     try:
@@ -112,9 +109,9 @@ def process_manifest(manifest, overrides, only):
         with open(template_manifest, "w") as f:
             f.write(tt2data)
 
-def update_function(fname, overrides, only, find_manifest=False):
+def update_function(fname, overrides, only, search=False):
     try:
-        manifest = find_manifest(fname) if find_manifest else fname
+        manifest = find_manifest(fname) if search else fname
         if manifest:
             process_manifest(manifest, overrides, only)
         else:
@@ -133,11 +130,13 @@ def main(args=None):
 
     args = parser.parse_args(args)
 
+    search = True
     fnames = []
     if args.allpy or args.allnode:
         term = "python" if args.allpy else "node"
         manifests = all_manifests(".", verbose=0, ignore_errors=True, full_paths=True)
         fnames = [name for name in manifests if term in get_runtime(name)]
+        search = False
     elif args.file:
         with open(args.file) as f:
             fnames = [l.strip() for l in f.readlines()]
@@ -156,5 +155,5 @@ def main(args=None):
 
     fnames = set(fnames)
     with ThreadPoolExecutor(max_workers=32) as tpx:
-        tpx.map(lambda fname: update_function(fname, overrides, args.only, False), fnames)
+        tpx.map(lambda fname: update_function(fname, overrides, args.only, search), fnames)
 
