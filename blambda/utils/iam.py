@@ -97,12 +97,11 @@ def role_policy_upsert(fname, policy_statement, dryrun):
         role_arn = role.meta.data['Arn']
         policy = get_policy(role)
         if not policy:
-            if desired_policy:
-                print("no policy. creating")
-                policy = iam.RolePolicy(role_name, policy_name)
-                # something does not happen right away
-                time.sleep(1)
-            else:
+            print("no policy. creating")
+            policy = iam.RolePolicy(role_name, policy_name)
+            # something does not happen right away
+            time.sleep(1)
+            if not desired_policy:
                 print("no permissions defined; implementing a no-permission policy")
                 desired_policy = mk_policy(no_permission_policy)
         else:
