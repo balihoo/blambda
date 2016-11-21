@@ -167,11 +167,11 @@ def run_from_ve(activate_script, fname):
         tmp.write(". {}\n".format(activate_script))
         tmp.write("echo now using py: $(which python)\n")
         tmp.write("echo now using pip: $(which pip)\n")
-        tmp.write("echo now using blambda: $(which blambda)\n")
         #upgrading pip breaks the paths again
         tmp.write("#pip install --upgrade pip\n")
         tmp.write("pip install futures\n")
         tmp.write("pip install boto3\n")
+        tmp.write("pip install git+https://github.com/balihoo/blambda.git\n")
         tmp.write("echo now using blambda: $(which blambda)\n")
         tmp.write("blambda deps {} --recursive --ve -v\n".format(fname))
     #make the script executable
