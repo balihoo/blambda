@@ -90,7 +90,8 @@ def package(manifest_filename, dryrun=False):
         manifest = json.load(f)
     tmpdir = tempfile.mkdtemp()
     for command in manifest.get('before deploy', []):
-        spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
+        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
+        print('\n'.join(out+err))
 
     libdir = os.path.join(basedir, "lib")
     moddir = os.path.join(basedir, "node_modules")
@@ -138,7 +139,8 @@ def package(manifest_filename, dryrun=False):
         options.update(manifest['options'])
     manifest['options'] = options
     for command in manifest.get('after deploy', []):
-        spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
+        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
+        print('\n'.join(out+err))
     archive = shutil.make_archive(fname, "zip", tmpdir)
     shutil.rmtree(tmpdir) if not dryrun else print(pRed("DRYRUN!! -- TEMPDIR: " + tmpdir))
     return archive, manifest
