@@ -27,10 +27,50 @@ no_permission_policy = [
     }
 ]
 
-def mk_policy(statement):
+def expand_shorthand(action, arn):
+   return {
+       "Effect": "Allow",
+       "Action": [ action ],
+       "Resource": [ arn ]
+   }
+
+def expand_all_shorthands(original):
+    """ allows specifying a statement like:
+       { "logs:DescribeLogStreams": "arn:aws:logs:*:*:log-group:/aws/lambda:*" }
+    """
+    expanded = []
+    for policy in original:
+        if all(k in policy for k in ('Effect', 'Action', 'Resource')):
+            expanded.append(policy)
+        else:
+            expanded += [expand_shorthand(k, v) for k, v in policy.items()]
+    return expanded
+
+def mk_policy(statement, fname, account):
+    statement = statement if type(statement) == list else []
+    if account:
+        statement.append(mk_cloudlog_policy(fname, account))
+    elif not statement:
+        print("no account and no permissions; function may not be able to log")
+        statement = no_permission_policy
+    statement = expand_all_shorthands(statement)
     return {
         'Version': '2012-10-17',
         'Statement': statement
+    }
+
+def mk_cloudlog_policy(fname, account):
+    return {
+        "Effect": "Allow",
+        "Action": [
+            "logs:CreateLogGroup",
+            "logs:CreateLogStream",
+            "logs:PutLogEvents",
+            "logs:DescribeLogStreams"
+        ],
+        "Resource": [
+            "arn:aws:logs:*:{}:log-group:/aws/lambda/{}:*".format(account, fname)
+        ]
     }
 
 def mk_role_name(fname):
@@ -58,8 +98,8 @@ def policy_diff(p_current, p_desired):
             tofile='desired'
         )
 
-def role_policy_upsert(fname, policy_statement, dryrun):
-    desired_policy = mk_policy(policy_statement) if policy_statement else None
+def role_policy_upsert(fname, policy_statement, account, dryrun):
+    desired_policy = mk_policy(policy_statement, fname, account)
     role_name = mk_role_name(fname)
     policy_name = mk_policy_name(fname)
     print("applying {} permission(s) to {} as {}:".format(len(policy_statement), role_name, policy_name))
@@ -87,7 +127,7 @@ def role_policy_upsert(fname, policy_statement, dryrun):
                     AssumeRolePolicyDocument=json.dumps(assume_role_policy)
                 )
                 # something does not happen right away
-                time.sleep(1)
+                time.sleep(5)
             else:
                 print("dryrun: did not create role")
                 return None
@@ -100,16 +140,9 @@ def role_policy_upsert(fname, policy_statement, dryrun):
             print("no policy. creating")
             policy = iam.RolePolicy(role_name, policy_name)
             # something does not happen right away
-            time.sleep(1)
-            if not desired_policy:
-                print("no permissions defined; implementing a no-permission policy")
-                desired_policy = mk_policy(no_permission_policy)
+            time.sleep(5)
         else:
-            print("found policy:")
-            if not desired_policy:
-                print("no permissions defined; implementing a no-permission policy")
-                desired_policy = mk_policy(no_permission_policy)
-
+            print("found policy. updating")
             diff = policy_diff(policy.policy_document, desired_policy)
             if not diff:
                 print("policy matches: no update")
@@ -123,11 +156,12 @@ def role_policy_upsert(fname, policy_statement, dryrun):
                 print("updating policy")
                 policy.put(PolicyDocument=json.dumps(desired_policy))
                 # something does not happen right away
-                time.sleep(1)
+                time.sleep(5)
         else:
             print("DRYRUN: did not update role policy")
         return role_arn
     except ClientError as e:
+        raise
         if 'AccessDenied' in str(e):
             print(pRed("ACCESS DENIED: unable to create roles/policies"))
             return None

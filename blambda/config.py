@@ -35,7 +35,7 @@ def load():
 def main(args=None):
     parser = argparse.ArgumentParser("configure blambda")
     parser.add_argument('action', choices=['set_local', 'set_global', 'get'])
-    parser.add_argument('variable', choices=['region', 'environment', 'role', 'application', 'all'])
+    parser.add_argument('variable', choices=['region', 'environment', 'role', 'application', 'account', 'all'])
     parser.add_argument('value', type=str, help='the value to give to the variable', nargs='?')
     args = parser.parse_args(args)
     if args.action == 'set_local':

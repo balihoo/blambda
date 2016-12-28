@@ -36,7 +36,6 @@ class Clients(object):
         self.region = self.cfg.get('region', 'us-east-1')
         self.events_client = boto3.client('events', region_name=self.region)
         self.lambda_client = boto3.client('lambda', region_name=self.region)
-        self.iam_client = boto3.client('iam', region_name=self.region)
 
 def js_name(coffee_file):
     """ return the name of the provided file with the extension replaced by 'js'
@@ -287,7 +286,7 @@ def publish(name, role, zipfile, options, dryrun):
         return (response['FunctionName'], response['FunctionArn'])
     return (name, "DRYRUN")
 
-def deploy(function_names, env, prefix, role_arn, dryrun=False):
+def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False):
     """ deploys one or more functions to lambda
     Args:
         function_names (list(str)): list of function names
@@ -325,10 +324,11 @@ def deploy(function_names, env, prefix, role_arn, dryrun=False):
                     manifest['options']['VpcConfig'] = get_vpc_config()
 
             #Role setup
+            role_arn = override_role_arn
             if not role_arn:
                 if 'permissions' in manifest:
                     with timed("setup role"):
-                        role_arn = role_policy_upsert(function_name, manifest['permissions'], dryrun)
+                        role_arn = role_policy_upsert(function_name, manifest['permissions'], account, dryrun)
                     if not role_arn:
                         role_arn = clients.cfg.get('role')
                         print(pRed("Setting permissions failed. Defaulting to {}".format(role_arn)))
@@ -368,6 +368,7 @@ def main(args=None):
     parser = argparse.ArgumentParser("package and deploy lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
     parser.add_argument('--prefix', type=str, help='the prefix for the function', default=clients.cfg.get('application', ''))
+    parser.add_argument('--account', type=str, help='the account to use for resource permissions', default=clients.cfg.get('account'))
     parser.add_argument('--env', type=str, help='the environment this function will run in', default=clients.cfg.get('environment', ''))
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
@@ -388,7 +389,7 @@ def main(args=None):
         print("  " + "\n  ".join(all_manifests(".")))
         sys.exit(-1)
 
-    deployed = deploy(fnames, args.env, args.prefix, args.role, args.dryrun)
+    deployed = deploy(fnames, args.env, args.prefix, args.role, args.account, args.dryrun)
     if deployed != fnames:
         not_deployed = fnames - deployed
         if len(deployed) > 0:
