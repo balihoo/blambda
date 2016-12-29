@@ -161,7 +161,6 @@ def role_policy_upsert(fname, policy_statement, account, dryrun):
             print("DRYRUN: did not update role policy")
         return role_arn
     except ClientError as e:
-        raise
         if 'AccessDenied' in str(e):
             print(pRed("ACCESS DENIED: unable to create roles/policies"))
             return None
