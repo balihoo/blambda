@@ -117,6 +117,11 @@ def process_manifest(manifest, basedir, clean, verbose=False):
                 clean=clean,
                 verbose=verbose
             )
+
+            if clean:
+                # Only clean once
+                clean = False
+
             print(pGreen("All {} installed".format(depsection)) if good else pRed("Failed to install one or more deps"))
             if not good:
                 raise Exception("Failed to install one or more deps")
