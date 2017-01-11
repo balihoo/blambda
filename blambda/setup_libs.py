@@ -139,8 +139,7 @@ def process_manifest(manifest, basedir, clean, verbose=False):
         basedir,
         runtime,
         version_required=True,
-        clean=clean,
-        verbose=verbose
+        clean=clean
     )
 
     print(pGreen("All dependencies installed") if good else pRed("Failed to install one or more deps"))
