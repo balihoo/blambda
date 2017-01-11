@@ -115,7 +115,7 @@ def merge_dependencies(manifest):
                     merged_dependencies[package] = version
 
                 elif existing_version != version:
-                    print(pRed("Multiple versions of package {} specified: {} and {}".format(package, existing_version, version))
+                    print(pRed("Multiple versions of package {} specified: {} and {}".format(package, existing_version, version)))
                     raise Exception("Failed to install dependencies")
 
     return merged_dependencies
