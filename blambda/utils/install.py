@@ -12,7 +12,7 @@ def str_types():
     except NameError:
         return (str,)
 
-def install_deps(dependencies, basedir, runtime, version_required=True, clean=False, verbose=False):
+def install_deps(dependencies, basedir, runtime, version_required=True, clean=False):
     """ installs node and python packages """
     if version_required:
         def valid_version(v):
