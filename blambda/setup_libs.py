@@ -96,10 +96,34 @@ def make_local_activate(basedir, include_dir, clean=False):
         raise OSError("virtual env python not found at {}".format(local_python))
     return (local_activate, local_python)
 
+def merge_dependencies(manifest):
+    """ checks for each possible dependency section within the manifest and merges
+    them into a single dictionary, throwing if different versions of the same package are specified
+    Args:
+      manifest (dict): the contents of the manifest file
+    """
+    merged_dependencies = {}
+
+    for depsection in ('dependencies', 'dev_dependencies', 'dev dependencies'):
+        if depsection in manifest:
+            dependencies = manifest[depsection]
+
+            for package, version in dependencies.iteritems():
+                existing_version = merged_dependencies.get(package)
+
+                if not existing_version:
+                    dependencies[package] = version
+
+                elif existing_version != version:
+                    pRed("Multiple versions of package {} specified: {} and {}".format(package, existing_version, version))
+                    raise Exception("Failed to install dependencies")
+
+    return merged_dependencies
+
 def process_manifest(manifest, basedir, clean, verbose=False):
     """ loads a manifest file, executes pre and post hooks and installs dependencies
     Args:
-      manifest_filename (str): filename (+path) of the manifest
+      manifest (dict): the contents of the manifest file
       basedir (str): directory to create the dependency dir under and execute hook commands in
       verbose (bool): inundates you with a deluge of information useful for investigating issues
     """
@@ -107,19 +131,21 @@ def process_manifest(manifest, basedir, clean, verbose=False):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
 
     runtime = manifest["options"]["Runtime"]
-    for depsection in ('dependencies', 'dev_dependencies', 'dev dependencies'):
-        if depsection in manifest:
-            good = install_deps(
-                manifest[depsection],
-                basedir,
-                runtime,
-                version_required=True,
-                clean=clean,
-                verbose=verbose
-            )
-            print(pGreen("All {} installed".format(depsection)) if good else pRed("Failed to install one or more deps"))
-            if not good:
-                raise Exception("Failed to install one or more deps")
+
+    merged_dependencies = merge_dependencies(manifest)
+
+    good = install_deps(
+        merged_dependencies,
+        basedir,
+        runtime,
+        version_required=True,
+        clean=clean,
+        verbose=verbose
+    )
+
+    print(pGreen("All dependencies installed") if good else pRed("Failed to install one or more deps"))
+    if not good:
+        raise Exception("Failed to install one or more deps")
 
     for source in manifest['source files']:
         #check for files that are to be moved and link them
