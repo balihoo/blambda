@@ -96,48 +96,48 @@ def make_local_activate(basedir, include_dir, clean=False):
         raise OSError("virtual env python not found at {}".format(local_python))
     return (local_activate, local_python)
 
-def merge_dependencies(manifest):
+def merge_dependencies(deps, dev_deps):
     """ checks for each possible dependency section within the manifest and merges
     them into a single dictionary, throwing if different versions of the same package are specified
     Args:
-      manifest (dict): the contents of the manifest file
+      deps (dict): the release dependencies
+      dev_deps (dict): the development dependencies
+    Returns:
+      dict: validated merged dependencies
     """
-    merged_dependencies = {}
+    #cross correlate the packages and extract mismatching versions
+    conflicts = [k for k in deps for d in dev_deps if k == d and deps[k] != dev_deps[d]]
+    if conflicts:
+        for package in conflicts:
+            print(pRed("Multiple versions of package {} specified: {} and {}".format(package, deps[package], dev_deps[package])))
+        raise Exception("Failed to install dependencies: version mismatch")
 
-    for depsection in ('dependencies', 'dev_dependencies', 'dev dependencies'):
-        if depsection in manifest:
-            dependencies = manifest[depsection]
-
-            for package, version in dependencies.iteritems():
-                existing_version = merged_dependencies.get(package)
-
-                if not existing_version:
-                    merged_dependencies[package] = version
-
-                elif existing_version != version:
-                    print(pRed("Multiple versions of package {} specified: {} and {}".format(package, existing_version, version)))
-                    raise Exception("Failed to install dependencies")
-
+    #return a new dict containing all dependencies
+    merged_dependencies = dict(deps)
+    merged_dependencies.update(dev_deps)
     return merged_dependencies
 
-def process_manifest(manifest, basedir, clean, verbose=False):
+def process_manifest(manifest, basedir, clean, prod, verbose=False):
     """ loads a manifest file, executes pre and post hooks and installs dependencies
     Args:
       manifest (dict): the contents of the manifest file
       basedir (str): directory to create the dependency dir under and execute hook commands in
+      clean (bool): whether or not to clean out the dependencies dir
+      prod (bool): if true, do not install development dependencies
       verbose (bool): inundates you with a deluge of information useful for investigating issues
     """
     for command in manifest.get('before setup', []):
         spawn(command, show=True, workingDirectory=basedir, raise_on_fail=True)
 
-    runtime = manifest["options"]["Runtime"]
-
-    merged_dependencies = merge_dependencies(manifest)
+    dependencies = manifest.get('dependencies', {})
+    if not prod:
+        dev_deps = manifest.get('dev dependencies', {})
+        dependencies = merge_dependencies(dependencies, dev_deps)
 
     good = install_deps(
-        merged_dependencies,
+        dependencies,
         basedir,
-        runtime,
+        manifest["options"]["Runtime"],
         version_required=True,
         clean=clean
     )
@@ -210,6 +210,7 @@ def main(args=None):
     parser.add_argument('--ve', help='set up a virtual environment', action='store_true')
     parser.add_argument('-v', '--verbose', help='verbose output', action='store_true')
     parser.add_argument('-c', '--clean', help='clean environment', action='store_true')
+    parser.add_argument('-p', '--prod', help='production. Install no dev deps', action='store_true')
     parser.add_argument('--recursive', help=argparse.SUPPRESS, action='store_true')
     parser.add_argument('--file', type=str, help='filename containing function names')
     args = parser.parse_args(args)
@@ -238,7 +239,7 @@ def main(args=None):
                     # already running in the right ve!
                     if args.verbose:
                         print("processing manifest from ve {}".format(activate_script))
-                    process_manifest(manifest, basedir, args.clean, args.verbose)
+                    process_manifest(manifest, basedir, args.clean, args.prod, args.verbose)
                 else:
                     if args.verbose:
                         print("no exec match: {} vs {}".format(sys.executable, python_executable))
@@ -248,7 +249,7 @@ def main(args=None):
                     run_from_ve(activate_script, fname)
             else:
                 #setting up the libs in whatever env we're in
-                process_manifest(manifest, basedir, args.clean, args.verbose)
+                process_manifest(manifest, basedir, args.clean, args.prod, args.verbose)
         else:
             print(pRed("unable to find {}".format(fname)))
 
