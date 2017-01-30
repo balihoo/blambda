@@ -56,7 +56,8 @@ The json file is your manifest, which can look like:
           "Effect": "Allow",
           "Action": "route53:ChangeResourceRecordSets",
           "Resource": "arn:aws:route53:::hostedzone/SAKJHAUHIS"
-      }
+      },
+      { "logs:DescribeLogStreams": "arn:aws:logs:*:*:log-group:/aws/lambda:*" }
     ],
     "schedule": {
         "input": { "things": "stuff" },

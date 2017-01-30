@@ -92,7 +92,7 @@ def package(manifest_filename, dryrun=False):
         (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
         print('\n'.join(out+err))
 
-    libdir = os.path.join(basedir, "lib")
+    libdir = os.path.join(basedir, "lib_{}".format(fname))
     moddir = os.path.join(basedir, "node_modules")
     if os.path.isdir(libdir):
         call(" ".join(("cp", "-r", os.path.join(libdir, "*"), tmpdir)), shell=True)

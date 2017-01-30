@@ -12,7 +12,7 @@ def str_types():
     except NameError:
         return (str,)
 
-def install_deps(dependencies, basedir, runtime, version_required=True, clean=False):
+def install_deps(dependencies, basedir, libdir, runtime, version_required=True, clean=False):
     """ installs node and python packages """
     if version_required:
         def valid_version(v):
@@ -37,7 +37,6 @@ def install_deps(dependencies, basedir, runtime, version_required=True, clean=Fa
 
     elif "python" in runtime:
         install_concurrency = 32
-        libdir = os.path.join(basedir, "lib")
         if os.path.exists(libdir) and clean:
             shutil.rmtree(libdir)
         if not os.path.exists(libdir):

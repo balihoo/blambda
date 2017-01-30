@@ -15,7 +15,7 @@ from .utils.findfunc import (
     split_path
 )
 
-def make_local_activate(basedir, include_dir, clean=False):
+def make_local_activate(basedir, libdir, clean=False):
     """ set up a base lambda ve if needed, copy it locally to have packages installed there
     Args:
         basedir (str): directory to create the ve under
@@ -29,13 +29,12 @@ def make_local_activate(basedir, include_dir, clean=False):
     master_ve_dir = os.path.join(config_dir, "lambdave")
     master_activate = os.path.abspath(os.path.join(master_ve_dir, "activate"))
     local_ve_dir = os.path.join(basedir, "ve_{}".format(os.path.basename(basedir)))
-    include_dir = os.path.join(basedir, "lib")
     module_dir = os.path.join(basedir, "node_modules")
     local_activate = os.path.abspath(os.path.join(local_ve_dir, "bin", "activate"))
     base_activate = os.path.abspath(os.path.join(basedir, "activate"))
 
     if clean:
-        for path in [include_dir, local_ve_dir, base_activate]:
+        for path in [libdir, local_ve_dir, base_activate]:
             if os.path.exists(path):
                 print(pBlue("Clean: removing {}".format(path)))
                 if os.path.isdir(path):
@@ -89,7 +88,7 @@ def make_local_activate(basedir, include_dir, clean=False):
     if not os.path.exists(base_activate):
         with open(base_activate, "w") as f:
             f.write(". {}\n".format(os.path.abspath(local_activate)))
-            f.write("export PYTHONPATH={}\n".format(os.path.abspath(include_dir)))
+            f.write("export PYTHONPATH={}\n".format(os.path.abspath(libdir)))
 
     local_python = os.path.abspath(os.path.join(local_ve_dir, "bin", "python"))
     if not os.path.exists(local_python):
@@ -117,7 +116,7 @@ def merge_dependencies(deps, dev_deps):
     merged_dependencies.update(dev_deps)
     return merged_dependencies
 
-def process_manifest(manifest, basedir, clean, prod, verbose=False):
+def process_manifest(manifest, basedir, libdir, clean, prod, verbose=False):
     """ loads a manifest file, executes pre and post hooks and installs dependencies
     Args:
       manifest (dict): the contents of the manifest file
@@ -137,6 +136,7 @@ def process_manifest(manifest, basedir, clean, prod, verbose=False):
     good = install_deps(
         dependencies,
         basedir,
+        libdir,
         manifest["options"]["Runtime"],
         version_required=True,
         clean=clean
@@ -232,14 +232,14 @@ def main(args=None):
             with open(manifest_filename) as f:
                 manifest = json.load(f)
             runtime = manifest.get("runtime", "python")
+            libdir = os.path.join(basedir, "lib_{}".format(fname))
             if args.ve and "python" in runtime.lower():
-                incdir = os.path.join(basedir, "lib")
-                (activate_script, python_executable) = make_local_activate(basedir, incdir, args.clean)
+                (activate_script, python_executable) = make_local_activate(basedir, libdir, args.clean)
                 if sys.executable == python_executable:
                     # already running in the right ve!
                     if args.verbose:
                         print("processing manifest from ve {}".format(activate_script))
-                    process_manifest(manifest, basedir, args.clean, args.prod, args.verbose)
+                    process_manifest(manifest, basedir, libdir, args.clean, args.prod, args.verbose)
                 else:
                     if args.verbose:
                         print("no exec match: {} vs {}".format(sys.executable, python_executable))
@@ -249,7 +249,7 @@ def main(args=None):
                     run_from_ve(activate_script, fname)
             else:
                 #setting up the libs in whatever env we're in
-                process_manifest(manifest, basedir, args.clean, args.prod, args.verbose)
+                process_manifest(manifest, basedir, libdir, args.clean, args.prod, args.verbose)
         else:
             print(pRed("unable to find {}".format(fname)))
 
