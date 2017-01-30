@@ -4,6 +4,7 @@ from subprocess import *
 from contextlib import contextmanager
 import time
 import json
+import os
 
 red = '\033[1;31m'
 grn = '\033[1;32m'
@@ -14,22 +15,22 @@ cyn = '\033[1;36m'
 whi = '\033[0m'
 
 def pRed(s):
-	return "%s%s%s" % (red, s, whi)
+    return "%s%s%s" % (red, s, whi)
 
 def pGreen(s):
-	return "%s%s%s" % (grn, s, whi)
+    return "%s%s%s" % (grn, s, whi)
 
 def pCyan(s):
-	return "%s%s%s" % (cyn, s, whi)
+    return "%s%s%s" % (cyn, s, whi)
 
 def pYellow(s):
-	return "%s%s%s" % (yel, s, whi)
+    return "%s%s%s" % (yel, s, whi)
 
 def pBlue(s):
-	return "%s%s%s" % (blu, s, whi)
+    return "%s%s%s" % (blu, s, whi)
 
 def pMagenta(s):
-	return "%s%s%s" % (mag, s, whi)
+    return "%s%s%s" % (mag, s, whi)
 
 def normalize(bytebuf):
     try:
@@ -59,16 +60,16 @@ def spawn(cmd, show = False, workingDirectory = None, raise_on_fail=False):
 
 
 def humanize_time(secs):
-	mins, secs = divmod(secs, 60)
-	hours, mins = divmod(mins, 60)
-	ts = ''
-	if hours:
-		ts += "%dh" % hours
-	if mins:
-		ts += "%dm" % mins
-	if secs:
-		ts += "%ds" % secs
-	return ts
+    mins, secs = divmod(secs, 60)
+    hours, mins = divmod(mins, 60)
+    ts = ''
+    if hours:
+        ts += "%dh" % hours
+    if mins:
+        ts += "%dm" % mins
+    if secs:
+        ts += "%ds" % secs
+    return ts
 
 @contextmanager
 def timed(tag):
@@ -83,4 +84,7 @@ def json_filedump(name, obj):
 def json_fileload(name):
     with open(name) as f:
         return json.load(f)
+
+def mk_libdir(basedir, fname):
+    return os.path.join(basedir, "lib_{}".format(fname.split('/')[-1]))
 

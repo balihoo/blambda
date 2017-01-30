@@ -8,7 +8,7 @@ import subprocess
 import shutil
 from tempfile import NamedTemporaryFile
 
-from .utils.base import pGreen, pRed, pBlue, spawn
+from .utils.base import pGreen, pRed, pBlue, spawn, mk_libdir
 from .utils.install import install_deps
 from .utils.findfunc import (
     find_manifest,
@@ -232,7 +232,7 @@ def main(args=None):
             with open(manifest_filename) as f:
                 manifest = json.load(f)
             runtime = manifest.get("runtime", "python")
-            libdir = os.path.join(basedir, "lib_{}".format(fname))
+            libdir = mk_libdir(basedir, fname)
             if args.ve and "python" in runtime.lower():
                 (activate_script, python_executable) = make_local_activate(basedir, libdir, args.clean)
                 if sys.executable == python_executable:

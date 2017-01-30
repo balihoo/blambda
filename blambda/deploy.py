@@ -18,7 +18,7 @@ from subprocess import (
 
 from . import config
 
-from .utils.base import pGreen, pRed, pBlue, pMagenta, pYellow, spawn, timed
+from .utils.base import pGreen, pRed, pBlue, pMagenta, pYellow, spawn, timed, mk_libdir
 from .utils.vpc import VpcInfo
 from .utils.iam import role_policy_upsert
 
@@ -92,7 +92,7 @@ def package(manifest_filename, dryrun=False):
         (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
         print('\n'.join(out+err))
 
-    libdir = os.path.join(basedir, "lib_{}".format(fname))
+    libdir = mk_libdir(basedir, fname)
     moddir = os.path.join(basedir, "node_modules")
     if os.path.isdir(libdir):
         call(" ".join(("cp", "-r", os.path.join(libdir, "*"), tmpdir)), shell=True)
