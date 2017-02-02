@@ -118,7 +118,7 @@ def ensure_events_access(role):
     else:
         assume_role_policy = make_assume_role_policy(["lambda", "events"])
         try:
-            role.AssumeRolePolicy().update(PolicyDocument=assume_role_policy)
+            role.AssumeRolePolicy().update(PolicyDocument=json.dumps(assume_role_policy))
         except Exception as e:
             print("problem updating assume role policy: {}".format(e))
         time.sleep(5)
