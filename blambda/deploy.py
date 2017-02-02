@@ -334,7 +334,7 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
                             manifest['permissions'],
                             account,
                             bool(vpc or vpcid),
-                            "schedule" in manifest,
+                            'schedule' in manifest:,
                             dryrun
                         )
                     if not role_arn:

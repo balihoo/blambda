@@ -9,7 +9,7 @@ import time
 from .base import pRed
 
 def make_assume_role_policy(services):
-    return {
+    policy = {
       "Version": "2012-10-17",
       "Statement": [
         {
@@ -19,6 +19,8 @@ def make_assume_role_policy(services):
         }
       ]
     }
+    print("{} -> {}".format(services, policy))
+    return policy
 
 no_permission_policy = [
     {
@@ -134,6 +136,7 @@ def role_policy_upsert(fname, policy_statement, account, vpc, events, dryrun):
             print("role not found; creating {}".format(role_name))
             services = ["lambda"]
             if events:
+                print("adding events to assume services")
                 services.append("events")
             assume_role_policy = make_assume_role_policy(services)
             if not dryrun:
