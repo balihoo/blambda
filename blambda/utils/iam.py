@@ -105,7 +105,10 @@ def ensure_vpc_access(role):
             print("vpn access policy was already attached. no change")
             return
     print("Attaching vpn access policy")
-    role.attach_policy(PolicyArn=vpc_access_arn)
+    try:
+        role.attach_policy(PolicyArn=vpc_access_arn)
+    except Exception as e:
+        print("role attach error: {}".format(e))
 
 def role_policy_upsert(fname, policy_statement, account, vpc, dryrun):
     desired_policy = mk_policy(policy_statement, fname, account)
