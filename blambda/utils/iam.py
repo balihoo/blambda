@@ -98,7 +98,16 @@ def policy_diff(p_current, p_desired):
             tofile='desired'
         )
 
-def role_policy_upsert(fname, policy_statement, account, dryrun):
+def ensure_vpc_access(role):
+    vpc_access_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+    for p in role.attached_policies.all():
+        if p.arn == vpc_access_arn:
+            print("vpn access policy was already attached. no change")
+            return
+    print("Attaching vpn access policy")
+    role.attach_policy(PolicyArn=vpc_access_arn)
+
+def role_policy_upsert(fname, policy_statement, account, vpc, dryrun):
     desired_policy = mk_policy(policy_statement, fname, account)
     role_name = mk_role_name(fname)
     policy_name = mk_policy_name(fname)
@@ -135,6 +144,8 @@ def role_policy_upsert(fname, policy_statement, account, dryrun):
             print("role found")
 
         role_arn = role.meta.data['Arn']
+        if vpc:
+            ensure_vpc_access(role)
         policy = get_policy(role)
         if not policy:
             print("no policy. creating")
