@@ -8,16 +8,17 @@ import time
 
 from .base import pRed
 
-assume_role_policy = {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": { "Service": "lambda.amazonaws.com" },
-      "Action": "sts:AssumeRole"
+def make_assume_role_policy(services):
+    return {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": { "Service": ["{}.amazonaws.com".format(s) for s in services] },
+          "Action": "sts:AssumeRole"
+        }
+      ]
     }
-  ]
-}
 
 no_permission_policy = [
     {
@@ -105,12 +106,10 @@ def ensure_vpc_access(role):
             print("vpn access policy was already attached. no change")
             return
     print("Attaching vpn access policy")
-    try:
-        role.attach_policy(PolicyArn=vpc_access_arn)
-    except Exception as e:
-        print("role attach error: {}".format(e))
+    role.attach_policy(PolicyArn=vpc_access_arn)
+    time.sleep(5)
 
-def role_policy_upsert(fname, policy_statement, account, vpc, dryrun):
+def role_policy_upsert(fname, policy_statement, account, vpc, events, dryrun):
     desired_policy = mk_policy(policy_statement, fname, account)
     role_name = mk_role_name(fname)
     policy_name = mk_policy_name(fname)
@@ -133,6 +132,10 @@ def role_policy_upsert(fname, policy_statement, account, vpc, dryrun):
         role = get_role()
         if not role:
             print("role not found; creating {}".format(role_name))
+            services = ["lambda"]
+            if events:
+                services.append("events")
+            assume_role_policy = make_assume_role_policy(services)
             if not dryrun:
                 role = iam.create_role(
                     RoleName=role_name,

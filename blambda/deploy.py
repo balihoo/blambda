@@ -315,7 +315,7 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
             #VPC setup
             vpcid = manifest.get('options', {}).get('VpcConfig', {}).get('VpcId')
             vpc = manifest.get('vpc', False)
-            if  vpcid:
+            if vpcid:
                 #this is not a valid option for boto, but it should be
                 del manifest['options']['VpcConfig']['VpcId']
                 with timed("get vpc by id"):
@@ -329,7 +329,14 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
             if not role_arn:
                 if 'permissions' in manifest:
                     with timed("setup role"):
-                        role_arn = role_policy_upsert(function_name, manifest['permissions'], account, vpc, dryrun)
+                        role_arn = role_policy_upsert(
+                            function_name,
+                            manifest['permissions'],
+                            account,
+                            bool(vpc or vpcid),
+                            "schedule" in manifest,
+                            dryrun
+                        )
                     if not role_arn:
                         role_arn = clients.cfg.get('role')
                         print(pRed("Setting permissions failed. Defaulting to {}".format(role_arn)))
