@@ -111,6 +111,18 @@ def ensure_vpc_access(role):
     role.attach_policy(PolicyArn=vpc_access_arn)
     time.sleep(5)
 
+def ensure_events_access(role):
+    pdoc = role.assume_role_policy_document
+    if "events" in pdoc:
+        print("events already in assume role policy document")
+    else:
+        assume_role_policy = make_assume_role_policy(["lambda", "events"])
+        try:
+            role.AssumeRolePolicy().update(assume_role_policy)
+        except Exception as e:
+            print("problem updating assume role policy: {}".format(e))
+        time.sleep(5)
+
 def role_policy_upsert(fname, policy_statement, account, vpc, events, dryrun):
     desired_policy = mk_policy(policy_statement, fname, account)
     role_name = mk_role_name(fname)
@@ -155,6 +167,10 @@ def role_policy_upsert(fname, policy_statement, account, vpc, events, dryrun):
         role_arn = role.meta.data['Arn']
         if vpc:
             ensure_vpc_access(role)
+
+        if events:
+            ensure_events_access(role)
+
         policy = get_policy(role)
         if not policy:
             print("no policy. creating")
