@@ -88,7 +88,13 @@ def make_local_activate(basedir, libdir, clean=False):
     if not os.path.exists(base_activate):
         with open(base_activate, "w") as f:
             f.write(". {}\n".format(os.path.abspath(local_activate)))
-            f.write("export PYTHONPATH={}\n".format(os.path.abspath(libdir)))
+            f.write("export PYTHONPATH=$PYTHONPATH:{}\n".format(os.path.abspath(libdir)))
+    else:
+        with open(base_activate, "r") as f:
+            pathishere = libdir in f.read()
+        if not pathishere:
+            with open(base_activate, "a") as f:
+                f.write("export PYTHONPATH=$PYTHONPATH:{}\n".format(os.path.abspath(libdir)))
 
     local_python = os.path.abspath(os.path.join(local_ve_dir, "bin", "python"))
     if not os.path.exists(local_python):
