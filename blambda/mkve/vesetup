@@ -29,8 +29,12 @@ if [[ -z "$DIR" || -z "$PYVERSION" || -z "$VEVERSION" ]]; then
   usage
 fi
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  DEST=$(greadlink -f $DIR)
+else
+  DEST=$(readlink -f $DIR)
+fi
 
-DEST=$(readlink -f $DIR)
 VEDIR=$DEST/virtualenv/ve
 
 #setup python
