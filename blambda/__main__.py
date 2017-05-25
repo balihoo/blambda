@@ -1,6 +1,6 @@
 import argparse
 
-#local imports
+# local imports
 from . import (
     new,
     show,
@@ -12,6 +12,7 @@ from . import (
     config,
     cwlogs
 )
+
 
 def main():
     submap = {
@@ -34,6 +35,7 @@ def main():
     args, sub_args = parser.parse_known_args()
 
     submap[args.task].main(sub_args)
+
 
 if __name__ == "__main__":
     main()

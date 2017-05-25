@@ -1,6 +1,32 @@
 # blambda
 Balihoo Lambda deploy tools
 
+## Requirements
+
+1. Install pyenv
+
+pyenv is used to manage multiple python versions, detailed instructions
+are [here](https://github.com/pyenv/pyenv-installer#github-way-recommended)
+
+```bash
+curl -L https://raw.githubusercontent.com/pyenv/pyenv-installer/master/bin/pyenv-installer | bash
+```
+
+Then add the following to your `~/.bashrc`
+
+```bash
+export PATH="~/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+```
+
+If you have build issues, see [pyenv help](https://github.com/pyenv/pyenv/wiki/Common-build-problems), 
+e.g. I needed to install:
+
+```bash
+sudo apt-get install libbz2-dev
+```
+
 ## installation
 ```
 pip install git+https://github.com/balihoo/blambda.git

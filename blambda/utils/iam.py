@@ -1,26 +1,28 @@
-import boto3
 import json
+import time
 from copy import deepcopy
 from difflib import unified_diff
-from botocore.exceptions import ClientError
 from pprint import pprint
-import time
 
-from .base import pRed
+import boto3
+from botocore.exceptions import ClientError
+from termcolor import cprint
+
 
 def make_assume_role_policy(services):
     policy = {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Effect": "Allow",
-          "Principal": { "Service": ["{}.amazonaws.com".format(s) for s in services] },
-          "Action": "sts:AssumeRole"
-        }
-      ]
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"Service": ["{}.amazonaws.com".format(s) for s in services]},
+                "Action": "sts:AssumeRole"
+            }
+        ]
     }
     print("{} -> {}".format(services, policy))
     return policy
+
 
 no_permission_policy = [
     {
@@ -30,12 +32,14 @@ no_permission_policy = [
     }
 ]
 
+
 def expand_shorthand(action, arn):
-   return {
-       "Effect": "Allow",
-       "Action": [ action ],
-       "Resource": [ arn ]
-   }
+    return {
+        "Effect": "Allow",
+        "Action": [action],
+        "Resource": [arn]
+    }
+
 
 def expand_all_shorthands(original):
     """ allows specifying a statement like:
@@ -49,6 +53,7 @@ def expand_all_shorthands(original):
             expanded += [expand_shorthand(k, v) for k, v in policy.items()]
     return expanded
 
+
 def mk_policy(statement, fname, account):
     statement = statement if type(statement) == list else []
     if account:
@@ -61,6 +66,7 @@ def mk_policy(statement, fname, account):
         'Version': '2012-10-17',
         'Statement': statement
     }
+
 
 def mk_cloudlog_policy(fname, account):
     return {
@@ -76,12 +82,15 @@ def mk_cloudlog_policy(fname, account):
         ]
     }
 
+
 def mk_role_name(fname):
-    name = fname.title().replace('_','')
+    name = fname.title().replace('_', '')
     return 'BalihooLambda{}'.format(name)
+
 
 def mk_policy_name(fname):
     return mk_role_name(fname) + 'Policy'
+
 
 def policy_diff(p_current, p_desired):
     def cleanstr(porg):
@@ -90,7 +99,8 @@ def policy_diff(p_current, p_desired):
             if 'Sid' in statement:
                 del statement['Sid']
         return json.dumps(p, sort_keys=True, indent=2)
-    (s1,s2) = (cleanstr(p) for p in (p_current, p_desired))
+
+    (s1, s2) = (cleanstr(p) for p in (p_current, p_desired))
     if s1 == s2:
         return None
     else:
@@ -101,6 +111,7 @@ def policy_diff(p_current, p_desired):
             tofile='desired'
         )
 
+
 def ensure_vpc_access(role):
     vpc_access_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
     for p in role.attached_policies.all():
@@ -110,6 +121,7 @@ def ensure_vpc_access(role):
     print("Attaching vpn access policy")
     role.attach_policy(PolicyArn=vpc_access_arn)
     time.sleep(5)
+
 
 def ensure_events_access(role):
     pdoc = role.assume_role_policy_document
@@ -122,6 +134,7 @@ def ensure_events_access(role):
         except Exception as e:
             print("problem updating assume role policy: {}".format(e))
         time.sleep(5)
+
 
 def role_policy_upsert(fname, policy_statement, account, vpc, events, dryrun):
     desired_policy = mk_policy(policy_statement, fname, account)
@@ -198,6 +211,6 @@ def role_policy_upsert(fname, policy_statement, account, vpc, events, dryrun):
         return role_arn
     except ClientError as e:
         if 'AccessDenied' in str(e):
-            print(pRed("ACCESS DENIED: unable to create roles/policies"))
+            cprint("ACCESS DENIED: unable to create roles/policies", 'red')
             return None
         raise

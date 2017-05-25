@@ -1,18 +1,7 @@
-import boto3
-from botocore.exceptions import ClientError
-from botocore.client import Config as BotoConfig
-import json
 import argparse
+import json
+
 import os
-import subprocess
-import sys
-
-from .utils.findfunc import (
-  find_manifest,
-  split_path
-)
-
-from . import config
 
 handler_code = {
     "python": '\n'.join([
@@ -25,18 +14,22 @@ handler_code = {
     ]),
 }
 
+
 def main(args=None):
+    runtimes = {
+        'python27': ('python2.7', 'py'),
+        'python36': ('python3.6', 'py'),
+        'coffee': ('nodejs4.3', 'coffee')
+    }
+
     parser = argparse.ArgumentParser("create a new lambda function")
     parser.add_argument('function_name', type=str, help='the base name of the function')
-    parser.add_argument('--runtime', type=str, help='node or python', default='python')
+    parser.add_argument('--runtime', type=str, help='which lambda runtime', default='python27', choices=runtimes.keys())
     parser.add_argument('--nodir', help='do not create a directory', action='store_true')
     args = parser.parse_args(args)
 
     fname = args.function_name
-    runtimes = {
-        'python': ('python2.7', 'py'),
-        'coffee': ('nodejs4.3', 'coffee')
-    }
+
     runtime, ext = runtimes[args.runtime]
     filename = "{}.{}".format(fname, ext)
     manifest = {

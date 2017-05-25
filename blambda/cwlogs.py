@@ -1,25 +1,18 @@
 #!/usr/bin/env python
 
-import sys
-import boto3
-from botocore.exceptions import ClientError
-import time
 import argparse
-import re
+import itertools
 import json
-from collections import defaultdict
+import re
+import time
 from datetime import (
-    date,
     datetime
 )
+
+import boto3
+from botocore.client import Config as BotoConfig
 from dateutil.parser import parse as dtparse
 from dateutil.tz import tzlocal
-from botocore.exceptions import ClientError
-from botocore.client import Config as BotoConfig
-from concurrent.futures import ThreadPoolExecutor
-import itertools
-from pprint import pprint
-from .utils.base import pGreen, pRed, pBlue, pMagenta, spawn, timed
 
 client = boto3.client(
     'logs',
@@ -29,11 +22,14 @@ client = boto3.client(
         read_timeout=300)
 )
 
+
 def merge_lists(lists):
     return list(itertools.chain.from_iterable(lists))
 
-def nowms():
+
+def now_ms():
     return int(time.time() * 1000)
+
 
 def parse_time(t):
     """ parse a date time string, or a negative number as
@@ -42,19 +38,21 @@ def parse_time(t):
     try:
         tint = int(t)
         if tint <= 0:
-            return int(nowms() + (tint * 1000))
+            return int(now_ms() + (tint * 1000))
     except ValueError:
         pass
-    #the parsed date may or may not have a tz; if it does not, localize it.
+    # the parsed date may or may not have a tz; if it does not, localize it.
     parsed = dtparse(t)
     if not parsed.tzinfo:
         parsed = parsed.replace(tzinfo=tzlocal())
     print('t {}'.format(parsed))
-    #Get the millisec by subtracting epoch in the same tz, then x 1000
+    # Get the millisec by subtracting epoch in the same tz, then x 1000
     return int((parsed - datetime.fromtimestamp(0, parsed.tzinfo)).total_seconds() * 1000)
+
 
 def msts2str(ts):
     return datetime.fromtimestamp(int(ts) / 1000.0).strftime('%Y-%m-%d %H:%M:%S.%f %z')
+
 
 def get_events(log_group, from_ms, to_ms, max_events=None, regex=None, verbose=False):
     kwargs = {
@@ -68,9 +66,9 @@ def get_events(log_group, from_ms, to_ms, max_events=None, regex=None, verbose=F
     while token:
         if max_events:
             if len(events) >= max_events:
-               break
+                break
             limit = max_events - len(events)
-            if limit < 10000: #max for aws api
+            if limit < 10000:  # max for aws api
                 kwargs['limit'] = limit
 
         response = client.filter_log_events(**kwargs)
@@ -85,8 +83,9 @@ def get_events(log_group, from_ms, to_ms, max_events=None, regex=None, verbose=F
     if verbose:
         print("{} events".format(len(events)))
 
-    #return a timestamp and msg tuple for each event
+    # return a timestamp and msg tuple for each event
     return events
+
 
 def as_json(events, leave_ts=False):
     rhdr = re.compile("^(START|END|REPORT) RequestId: ([a-z0-9\-]{36})")
@@ -106,12 +105,15 @@ def as_json(events, leave_ts=False):
             })
     return json_events
 
+
 def filtered(raw_events, regex):
     rfilter = re.compile(regex)
     return [e for e in raw_events if rfilter.search(e['message'])]
 
+
 def main(args=None):
-    parser = argparse.ArgumentParser("get cloudwatch log events for a lambda function. Json output can be fed into tools like decider/dec_stats")
+    parser = argparse.ArgumentParser("get cloudwatch log events for a lambda function. "
+                                     "Json output can be fed into tools like decider/dec_stats")
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--prefix', type=str, help='the prefix for the function', default='fulfillment')
     parser.add_argument('--env', type=str, help='dev or stage or something', default="dev")
@@ -139,4 +141,3 @@ def main(args=None):
             if args.human:
                 t = msts2str(t)
             print('{}: {}'.format(t, e['message'].strip()))
-

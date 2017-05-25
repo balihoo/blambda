@@ -1,41 +1,43 @@
 from __future__ import print_function
-import boto3
-from botocore.exceptions import ClientError
-import json
-import tempfile
-import shutil
-import argparse
-import os
-import errno
-import sys
-import glob
 
+import argparse
+import errno
+import glob
+import json
+import shutil
+import sys
+import tempfile
 from subprocess import (
     call,
-    check_output,
     CalledProcessError
 )
 
+import boto3
+import os
+from botocore.exceptions import ClientError
+from termcolor import cprint
+
 from . import config
-
-from .utils.base import pGreen, pRed, pBlue, pMagenta, pYellow, spawn, timed, mk_libdir
-from .utils.vpc import VpcInfo
-from .utils.iam import role_policy_upsert
-
+from .utils.base import spawn, timed
 from .utils.findfunc import (
     all_manifests,
     find_manifest,
-    split_path,
-    all_remote_functions
+    split_path
 )
+from .utils.iam import role_policy_upsert
+from .utils.lambda_manifest import LambdaManifest
+from .utils.vpc import VpcInfo
 
 clients = None
+
+
 class Clients(object):
     def __init__(self):
         self.cfg = config.load()
         self.region = self.cfg.get('region', 'us-east-1')
         self.events_client = boto3.client('events', region_name=self.region)
         self.lambda_client = boto3.client('lambda', region_name=self.region)
+
 
 def js_name(coffee_file):
     """ return the name of the provided file with the extension replaced by 'js'
@@ -44,6 +46,7 @@ def js_name(coffee_file):
     """
     return "{}.js".format(os.path.splitext(coffee_file)[0])
 
+
 def coffee_compile(coffee_file, basedir):
     """ compile a coffee file and return the compiled file's name
     Args:
@@ -51,8 +54,9 @@ def coffee_compile(coffee_file, basedir):
     """
     compiler = os.path.join(basedir, "node_modules", "coffee-script", "bin", "coffee")
     command = "{} -bc {}".format(compiler, coffee_file)
-    (r,s,e) = spawn(command, show=True)
+    spawn(command, show=True)
     return js_name(coffee_file)
+
 
 def copy_with_dir(src, dst):
     """ copies a file to a destination path, creating the path if it does not exist
@@ -70,13 +74,22 @@ def copy_with_dir(src, dst):
             raise
     shutil.copyfile(src, dst)
 
+
 def package(manifest_filename, dryrun=False):
     """ create an archive containing source files and deps for lambda
     Args:
         manifest_filename (str): path to the manifest file
         dryrun (bool): indicates that you're testing, and leaves the tmp dir for inspection
     """
-    (basedir, fname, ext) = split_path(manifest_filename)
+
+    # todo: clean this up -- some shared logic was moved to LambdaManifest but this isn't complete
+    lambda_manifest = LambdaManifest(manifest_filename)
+
+    basedir = lambda_manifest.basedir
+    fname = lambda_manifest.function_name
+    manifest = lambda_manifest.manifest
+
+    # default options
     options = {
         "Timeout": 30,
         "MemorySize": 128,
@@ -84,28 +97,34 @@ def package(manifest_filename, dryrun=False):
         "Runtime": "python2.7",
         "Handler": "{}.lambda_handler".format(fname),
     }
-    manifest = {}
-    with open(manifest_filename) as f:
-        manifest = json.load(f)
+
     tmpdir = tempfile.mkdtemp()
     for command in manifest.get('before deploy', []):
-        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
-        print('\n'.join(out+err))
+        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, working_directory=basedir)
+        print('\n'.join(out + err))
 
-    libdir = mk_libdir(basedir, fname)
-    moddir = os.path.join(basedir, "node_modules")
-    if os.path.isdir(libdir):
-        call(" ".join(("cp", "-r", os.path.join(libdir, "*"), tmpdir)), shell=True)
-    elif os.path.isdir(moddir):
+    # default runtime is python2.7
+    if 'python' in lambda_manifest.runtime:
+        if not os.path.exists(lambda_manifest.lib_dir) and manifest.get('dependencies', {}):
+            raise RuntimeError("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
+
+        call(" ".join(("cp", "-r", os.path.join(lambda_manifest.lib_dir, "*"), tmpdir)), shell=True)
+
+    elif 'nodejs' in lambda_manifest.runtime:
+        moddir = os.path.join(basedir, "node_modules")
+
+        if not os.path.exists(moddir) and manifest.get('dependencies', {}):
+            raise RuntimeError("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
+
         shutil.copytree(moddir, os.path.join(tmpdir, "node_modules"))
         os.mkdir(os.path.join(tmpdir, fname))
         options.update({
             "Handler": "{0}/{0}.handler".format(fname),
             "Runtime": "nodejs"
         })
-    elif len(manifest.get('dependencies', {})) > 0:
-        print(pRed("WARNING! dependencies defined, but no dependency directory found."))
-        print("  --> Be sure to run setup_libs prior to deploying\n")
+
+    else:
+        raise RuntimeError("Unknown runtime " + lambda_manifest.runtime)
 
     def copy_source_file(source, destination_name):
         for src in glob.glob(source):
@@ -116,7 +135,7 @@ def package(manifest_filename, dryrun=False):
                 os.remove(compiled)
             else:
                 dst = os.path.join(tmpdir, destination_name)
-                copy_with_dir(src,dst)
+                copy_with_dir(src, dst)
 
     for filename in manifest.get('source files', []):
         srcname = dstname = filename
@@ -136,13 +155,18 @@ def package(manifest_filename, dryrun=False):
 
     if 'options' in manifest:
         options.update(manifest['options'])
+
     manifest['options'] = options
+
     for command in manifest.get('after deploy', []):
-        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, workingDirectory=basedir)
-        print('\n'.join(out+err))
+        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, working_directory=basedir)
+        print('\n'.join(out + err))
+
     archive = shutil.make_archive(fname, "zip", tmpdir)
-    shutil.rmtree(tmpdir) if not dryrun else print(pRed("DRYRUN!! -- TEMPDIR: " + tmpdir))
+    shutil.rmtree(tmpdir) if not dryrun else cprint("DRYRUN!! -- TEMPDIR: " + tmpdir, 'red')
+
     return archive, manifest
+
 
 def git_sha():
     """ get the current sha """
@@ -154,22 +178,24 @@ def git_sha():
     except CalledProcessError:
         return "no git sha"
 
+
 def git_local_mods():
     """ return the number of modified, added or deleted files beyond last commit """
     try:
         (ret, out, err) = spawn("git status -suno", show=True)
         if ret == 0:
             return len([c for c in out if len(c.strip()) > 0])
-        print(pRed(' '.join(err)))
+        cprint(' '.join(err), 'red')
         return 0
     except CalledProcessError:
         return 0
+
 
 def setup_schedule(fname, farn, role, schedule, dryrun):
     events_client = clients.events_client
     lambda_client = clients.lambda_client
 
-    #cleanup
+    # cleanup
     rules = events_client.list_rule_names_by_target(TargetArn=farn)['RuleNames']
     for rule in rules:
         targets = events_client.list_targets_by_rule(Rule=rule)['Targets']
@@ -182,11 +208,11 @@ def setup_schedule(fname, farn, role, schedule, dryrun):
             print("removing {}".format(rule))
             if not dryrun:
                 events_client.delete_rule(Name=rule)
-    #(re)create
+    # (re)create
     rule_name = schedule['name'] if 'name' in schedule else "{}_trigger".format(fname)
     rate_or_cron = "rate" if "rate" in schedule else "cron"
     expression = schedule[rate_or_cron]
-    #you cannot add this target to an existing rule with this (at this time)
+    # you cannot add this target to an existing rule with this (at this time)
     print("adding rule {}".format(rule_name))
     if not dryrun:
         rule_arn = events_client.put_rule(
@@ -226,6 +252,7 @@ def setup_schedule(fname, farn, role, schedule, dryrun):
             else:
                 raise
 
+
 def get_vpc_config(vpcid=None):
     """ retrieves VPC information for a given vpc id or the first one found
     for the configured region and environment. Returns it as a configuration
@@ -240,6 +267,7 @@ def get_vpc_config(vpcid=None):
         'SubnetIds': vpc_info.dmz_subnets,
         'SecurityGroupIds': vpc_info.security_groups
     }
+
 
 def publish(name, role, zipfile, options, dryrun):
     """ publish a AWS Lambda function
@@ -259,8 +287,6 @@ def publish(name, role, zipfile, options, dryrun):
     if not 'Role' in options:
         options['Role'] = role
 
-    file_bytes = None
-    response = None
     with open(zipfile, 'rb') as f:
         file_bytes = f.read()
         print("Function Package: {} bytes".format(len(file_bytes)))
@@ -283,8 +309,9 @@ def publish(name, role, zipfile, options, dryrun):
                 )
             else:
                 raise e
-        return (response['FunctionName'], response['FunctionArn'])
-    return (name, "DRYRUN")
+        return response['FunctionName'], response['FunctionArn']
+    return name, "DRYRUN"
+
 
 def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False):
     """ deploys one or more functions to lambda
@@ -312,11 +339,11 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
                 whole_name = "{}_{}".format(group, basename)
             function_name = "{}_{}_{}".format(prefix.lower(), whole_name, env.lower())
 
-            #VPC setup
+            # VPC setup
             vpcid = manifest.get('options', {}).get('VpcConfig', {}).get('VpcId')
             vpc = manifest.get('vpc', False)
             if vpcid:
-                #this is not a valid option for boto, but it should be
+                # this is not a valid option for boto, but it should be
                 del manifest['options']['VpcConfig']['VpcId']
                 with timed("get vpc by id"):
                     manifest['options']['VpcConfig'] = get_vpc_config(vpcid)
@@ -324,7 +351,7 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
                 with timed("get vpc without id"):
                     manifest['options']['VpcConfig'] = get_vpc_config()
 
-            #Role setup
+            # Role setup
             role_arn = override_role_arn
             if not role_arn:
                 if 'permissions' in manifest:
@@ -339,22 +366,22 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
                         )
                     if not role_arn:
                         role_arn = clients.cfg.get('role')
-                        print(pRed("Setting permissions failed. Defaulting to {}".format(role_arn)))
+                        cprint("Setting permissions failed. Defaulting to " + role_arn, 'red')
                     else:
-                        print(pGreen("Specific permissions set with role: {}".format(role_arn)))
+                        cprint("Specific permissions set with role: " + role_arn, 'blue')
                 else:
                     role_arn = clients.cfg.get('role')
-                    print(pMagenta("no explicit role arn found, defaulting to {}".format(role_arn)))
+                    cprint("no explicit role arn found, defaulting to " + role_arn, 'blue')
             else:
-                print(pMagenta("Explicit role arn found: {}".format(role_arn)))
+                cprint("Explicit role arn found: " + role_arn, 'blue')
 
             if role_arn:
-                #Publishing
+                # Publishing
                 with timed("publish"):
                     (fullname, arn) = publish(function_name, role_arn, zipfile, manifest['options'], dryrun)
                 os.remove(zipfile)
 
-                #Schedule setup
+                # Schedule setup
                 if 'schedule' in manifest:
                     with timed("schedule setup"):
                         setup_schedule(fullname, arn, role_arn, manifest['schedule'], dryrun)
@@ -362,10 +389,13 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
                 deployed.append(fname)
                 print("Success!\n")
             else:
-                print(pRed("No role to default to, deploy cancelled. Use blambda config role <some role> to set a default"))
+                cprint("No role to default to, deploy cancelled. "
+                       "Use blambda config role <some role> to set a default",
+                       'red')
         else:
-            print(pYellow("*** WARNING: unable to find {} ***\n".format(fname)))
+            cprint("*** WARNING: unable to find {} ***\n".format(fname), 'yellow')
     return set(deployed)
+
 
 def main(args=None):
     """ main function for the deployment script.
@@ -375,9 +405,12 @@ def main(args=None):
     clients = Clients()
     parser = argparse.ArgumentParser("package and deploy lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
-    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=clients.cfg.get('application', ''))
-    parser.add_argument('--account', type=str, help='the account to use for resource permissions', default=clients.cfg.get('account'))
-    parser.add_argument('--env', type=str, help='the environment this function will run in', default=clients.cfg.get('environment', ''))
+    parser.add_argument('--prefix', type=str, help='the prefix for the function',
+                        default=clients.cfg.get('application', ''))
+    parser.add_argument('--account', type=str, help='the account to use for resource permissions',
+                        default=clients.cfg.get('account'))
+    parser.add_argument('--env', type=str, help='the environment this function will run in',
+                        default=clients.cfg.get('environment', ''))
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
     parser.add_argument('--dryrun', help='do not actually send anything to lambda', action='store_true')
@@ -392,8 +425,8 @@ def main(args=None):
 
     fnames = set(fnames)
     if len(fnames) < 1:
-        print(pRed("NO PACKAGE PROVIDED"))
-        print(pBlue("Choose one of the following:"))
+        cprint("NO PACKAGE PROVIDED", 'red')
+        cprint("Choose one of the following:", 'blue')
         print("  " + "\n  ".join(all_manifests(".")))
         sys.exit(-1)
 
@@ -401,10 +434,11 @@ def main(args=None):
     if deployed != fnames:
         not_deployed = fnames - deployed
         if len(deployed) > 0:
-            print(pBlue("deployed " + ", ".join(map(str, deployed))))
-        print(pRed("FAILED TO DEPLOY " + ", ".join(map(str, not_deployed))))
+            cprint("deployed " + ", ".join(map(str, deployed)), 'blue')
+        cprint("FAILED TO DEPLOY " + ", ".join(map(str, not_deployed)), 'red')
         sys.exit(len(not_deployed))
-    print(pGreen("Successfully deployed " + ", ".join(map(str, deployed))))
+    cprint("Successfully deployed " + ", ".join(map(str, deployed)), 'blue')
+
 
 if __name__ == '__main__':
     main()

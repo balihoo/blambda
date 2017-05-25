@@ -1,19 +1,14 @@
-import boto3
-from botocore.exceptions import ClientError
-from botocore.client import Config as BotoConfig
-import json
 import argparse
-import os
-import subprocess
+import json
 import sys
 
-from .utils.findfunc import (
-  find_manifest,
-  split_path
-)
+import boto3
+from botocore.client import Config as BotoConfig
 
 from . import config
+
 cfg = config.load()
+
 
 def main(args=None):
     parser = argparse.ArgumentParser("execute python lambda functions")
@@ -55,6 +50,6 @@ def main(args=None):
     else:
         print(response)
 
+
 if __name__ == '__main__':
     main()
-

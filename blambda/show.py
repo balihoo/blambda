@@ -1,6 +1,9 @@
 import argparse
+
 import os
+
 from .utils.findfunc import all_manifests
+
 
 def main(args=None):
     parser = argparse.ArgumentParser("list local functions")
@@ -17,4 +20,3 @@ def main(args=None):
             print(fname)
         else:
             print("{}: {}".format(fname, m))
-

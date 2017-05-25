@@ -1,6 +1,9 @@
 import argparse
+
 import os
+
 from .utils.diffs import who_needs_update
+
 
 def main(args=None):
     parser = argparse.ArgumentParser("list functions that need updating")

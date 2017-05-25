@@ -1,5 +1,8 @@
 import boto3
 
+from .base import is_string
+
+
 class VpcInfo(object):
     """ gather information from the VPC """
 
@@ -43,6 +46,7 @@ class VpcInfo(object):
         def envmatch(vpc):
             name = self.name_from_tags(vpc)
             return name == "{}-{}".format(self._env, self._region)
+
         vpcs = self._client.describe_vpcs()
         vpcids = [vpc['VpcId'] for vpc in vpcs['Vpcs'] if envmatch(vpc)]
         return vpcids[0] if vpcids else None
@@ -57,7 +61,7 @@ class VpcInfo(object):
         return items[0] if items else None
 
     def vpcid_filter(self):
-        return { 'Name': 'vpc-id', 'Values': [self._vpcid] }
+        return {'Name': 'vpc-id', 'Values': [self._vpcid]}
 
     def get_security_groups(self):
         sgroupname = "{}_{}_ssh_dmz_default".format(self._env, self._region)
@@ -72,9 +76,10 @@ class VpcInfo(object):
 
         filt = [self.vpcid_filter()]
         acls = self._client.describe_network_acls(Filters=filt)['NetworkAcls']
-        aclsubnets = {self.name_from_tags(acl):subnets_from_acl(acl) for acl in acls}
-        subnets = {k.replace('cloud', ''):v for (k,v) in aclsubnets.items() if type(k) in (str, unicode)}
+        aclsubnets = {self.name_from_tags(acl): subnets_from_acl(acl) for acl in acls}
+        subnets = {k.replace('cloud', ''): v for (k, v) in aclsubnets.items() if is_string(k)}
         return subnets
+
 
 if __name__ == "__main__":
     vpcinfo = VpcInfo('us-east-1', 'dev')

@@ -1,14 +1,16 @@
-import os
-import json
 import argparse
+import json
 
-configfile=os.path.abspath(os.path.join(os.path.expanduser('~'), '.config', 'blambda', 'config.json'))
-configfile_local=os.path.abspath(os.path.join(os.getcwd(), '.blambda', 'config.json'))
+import os
+
+configfile = os.path.abspath(os.path.join(os.path.expanduser('~'), '.config', 'blambda', 'config.json'))
+configfile_local = os.path.abspath(os.path.join(os.getcwd(), '.blambda', 'config.json'))
+
 
 def save(var, val, local):
     cfg = load()
     if val is None:
-        #remove if setting existing value to None
+        # remove if setting existing value to None
         if var in cfg:
             del cfg[var]
     else:
@@ -19,6 +21,7 @@ def save(var, val, local):
         os.makedirs(cfgdir)
     with open(cfgfile, 'w') as f:
         f.write(json.dumps(cfg, sort_keys=True, indent=2))
+
 
 def load():
     config = {}
@@ -31,6 +34,7 @@ def load():
         with open(configfile_local) as f:
             config.update(json.load(f))
     return config
+
 
 def main(args=None):
     parser = argparse.ArgumentParser("configure blambda")
@@ -46,6 +50,7 @@ def main(args=None):
         for k, v in sorted(load().items()):
             if args.variable in ('all', k):
                 print("{}: {}".format(k, v))
+
 
 if __name__ == '__main__':
     main()
