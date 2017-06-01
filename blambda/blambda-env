@@ -1,0 +1,45 @@
+#!/bin/bash
+# note that i called this 'blambda-env' rather than 'activate' so that it doesn't get confused with
+# the virtualenv activate script (otherwise you would need to specify a direct path to this script)
+
+# make sure script was sourced instead of just executed
+if [[ "$(basename "$0" 2> /dev/null)" == "blambda-env" ]]; then
+    (>&2 echo "Error: blambda-env must be sourced.")
+    exit 1
+fi
+
+# make sure cmd-line arg was specified
+if [[ -z $1 ]]; then
+	echo "Please specify a lambda function name"
+	return 1
+fi
+
+# Activate the correct base virtualenv
+BLAMBDA_ENV=(`blambda deps -e $1`)
+if [[ ${BLAMBDA_ENV[0]} != blambda* ]]; then
+	echo "blambda couldn't read the python environment from manifest, aborting!"
+	return 1
+fi
+
+PYENV_VERSION=${BLAMBDA_ENV[0]}
+echo "Activated ${PYENV_VERSION} virtualenv"
+
+# if BLAMBDA_LIB_PATH already exists, then remove
+# it from PYTHONPATH before adding the new one
+if [[ -v BLAMBDA_LIB_PATH ]]; then
+    echo "Removing ${BLAMBDA_LIB_PATH} from PYTHONPATH"
+	PYTHONPATH=${PYTHONPATH/${BLAMBDA_LIB_PATH}} # remove BLAMBDA_LIB_PATH from PYTHONPATH
+fi
+
+# add the new lib path
+BLAMBDA_LIB_PATH=${BLAMBDA_ENV[1]}
+PYTHONPATH=${BLAMBDA_LIB_PATH}:${PYTHONPATH}
+
+# clean up any left over leading/trailing colons from PYTHONPATH
+PYTHONPATH=${PYTHONPATH%:}
+PYTHONPATH=${PYTHONPATH#:}
+PYTHONPATH=${PYTHONPATH/::/:}
+
+export PYTHONPATH=$PYTHONPATH
+echo "Added ${BLAMBDA_LIB_PATH} to PYTHONPATH"
+

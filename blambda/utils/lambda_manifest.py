@@ -47,6 +47,8 @@ class LambdaManifest(object):
         if 'python' in self.runtime:
             env = env_manager.EnvManager(self.runtime)
             env.create(clean)
+            if clean:
+                shutil.rmtree(self.lib_dir)
             env.install_dependencies(self.lib_dir, **deps_to_install)
         else:
             moddir = os.path.join(basedir, "node_modules")

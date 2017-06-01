@@ -9,6 +9,7 @@ setup(name='blambda',
       url='git@github.com:balihoo/fulfillment-lambda-functions.git',
       install_requires=['boto3', 'python-dateutil', 'futures', 'requests', 'termcolor'],
       packages=find_packages(exclude=['tests']),
+      include_package_data=True,
       entry_points={
           'console_scripts': [
               'blambda = blambda.__main__:main',

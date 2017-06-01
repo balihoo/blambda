@@ -7,6 +7,7 @@ import subprocess as sp
 from collections import namedtuple
 
 import os
+
 from termcolor import cprint
 
 LambdaRuntime = namedtuple('LambdaRuntime', ('name', 'version', 'env_name'))
@@ -42,19 +43,25 @@ class EnvManager(object):
 
         sp.check_call("pyenv install -s " + self.runtime.version, shell=True)
 
-    def create_virtualenv(self, clear=True):
+    def create_virtualenv(self, clean=True):
         """ Create a blambda virtualenv
 
         Args:
-            clear: if True, remove the virtualenv before creating
+            clean: if True, remove the virtualenv before creating
         """
-        if os.path.exists(self.pyenv) and not clear:
-            cprint(self.runtime.env_name + " env exists, skipping...", "yellow")
-        else:
-            cprint("Creating {} virtualenv...".format(self.runtime.env_name), "yellow")
 
-            args = ['pyenv', 'virtualenv', '--clear', self.runtime.version, self.runtime.env_name]
-            sp.check_call(args)
+        if os.path.exists(self.pyenv):
+            if clean:
+                cprint("Removing {} virtualenv for clean install...".format(self.runtime.env_name), "yellow")
+                sp.check_call("pyenv uninstall -f " + self.runtime.env_name, shell=True)
+            else:
+                cprint(self.runtime.env_name + " env exists, skipping...", "yellow")
+                return
+
+        cprint("Creating {} virtualenv...".format(self.runtime.env_name), "yellow")
+
+        args = ['pyenv', 'virtualenv', '--clear', self.runtime.version, self.runtime.env_name]
+        sp.check_call(args)
 
     def install_dependencies(self, lib_dir, **dependencies):
         """ Install dependencies with pip
