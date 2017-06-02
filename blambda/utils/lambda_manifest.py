@@ -48,6 +48,7 @@ class LambdaManifest(object):
             env = env_manager.EnvManager(self.runtime)
             env.create(clean)
             if clean:
+                cprint("clean install -- removing " + self.lib_dir, 'yellow')
                 shutil.rmtree(self.lib_dir)
             env.install_dependencies(self.lib_dir, **deps_to_install)
         else:

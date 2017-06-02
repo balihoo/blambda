@@ -21,7 +21,7 @@ if [[ ${BLAMBDA_ENV[0]} != blambda* ]]; then
 	return 1
 fi
 
-PYENV_VERSION=${BLAMBDA_ENV[0]}
+pyenv shell ${BLAMBDA_ENV[0]}  # sets PYENV_VERSION
 echo "Activated ${PYENV_VERSION} virtualenv"
 
 # if BLAMBDA_LIB_PATH already exists, then remove

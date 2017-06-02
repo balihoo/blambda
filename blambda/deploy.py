@@ -292,10 +292,12 @@ def publish(name, role, zipfile, options, dryrun):
         print("Function Package: {} bytes".format(len(file_bytes)))
     if not dryrun:
         try:
+            cprint("Updating lambda function code", 'yellow')
             response = client.update_function_code(
                 FunctionName=name,
                 ZipFile=file_bytes
             )
+            cprint("Updating lambda function configuration", 'yellow')
             response = client.update_function_configuration(
                 FunctionName=name,
                 **options
