@@ -51,12 +51,12 @@ class EnvManager(object):
         """
 
         if os.path.exists(self.pyenv):
-            if clean:
-                cprint("Removing {} virtualenv for clean install...".format(self.runtime.env_name), "yellow")
-                sp.check_call("pyenv uninstall -f " + self.runtime.env_name, shell=True)
-            else:
+            if not clean:
                 cprint(self.runtime.env_name + " env exists, skipping...", "yellow")
                 return
+
+            cprint("Removing {} virtualenv for clean install...".format(self.runtime.env_name), "yellow")
+            sp.check_call("pyenv uninstall -f " + self.runtime.env_name, shell=True)
 
         cprint("Creating {} virtualenv...".format(self.runtime.env_name), "yellow")
 
