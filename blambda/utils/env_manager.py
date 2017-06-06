@@ -22,7 +22,8 @@ class EnvManager(object):
 
     @property
     def pyenv(self):
-        return os.path.expanduser('~/.pyenv/versions/{}'.format(self.runtime.env_name))
+        root = os.environ.get('PYENV_ROOT', os.path.expanduser('~/.pyenv/'))
+        return os.path.join(root, 'versions', self.runtime.env_name)
 
     @property
     def pip(self):
