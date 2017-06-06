@@ -47,7 +47,7 @@ class LambdaManifest(object):
         if 'python' in self.runtime:
             env = env_manager.EnvManager(self.runtime)
             env.create(clean)
-            if clean:
+            if clean and os.path.exists(self.lib_dir):
                 cprint("clean install -- removing " + self.lib_dir, 'yellow')
                 shutil.rmtree(self.lib_dir)
             env.install_dependencies(self.lib_dir, **deps_to_install)
