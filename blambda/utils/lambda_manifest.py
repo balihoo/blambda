@@ -60,7 +60,7 @@ class LambdaManifest(object):
             for dependency, version in deps_to_install.items():
                 spawn("npm install {}@{}".format(dependency, version), show=True, working_directory=basedir)
 
-        cprint("All dependencies installed", 'blue')
+        cprint("All dependencies installed: " + self.function_name, 'blue')
 
         for source in manifest['source files']:
             # check for files that are to be moved and link them

@@ -1,21 +1,37 @@
 from __future__ import print_function
 
 import argparse
+import concurrent.futures
 import shutil
-import subprocess as sp
+import sys
 
 import os
-
 from termcolor import cprint
 
-from .utils.findfunc import find_manifest
 from .utils import env_manager
+from .utils.findfunc import find_manifest
 from .utils.lambda_manifest import LambdaManifest
 
 
 def read_function_names_from_file(filename):
     with open(filename) as f:
         return {line.strip() for line in f}
+
+
+def find_and_process_manifest(args, func_name):
+    manifest_filename = find_manifest(func_name)
+    if not manifest_filename:
+        cprint("unable to find " + func_name, 'red')
+        sys.exit(1)
+    else:
+        manifest = LambdaManifest(manifest_filename)
+        if args.echo_env:
+            env = env_manager.EnvManager(manifest.runtime)
+            print(env.runtime.env_name)
+            print(manifest.lib_dir)
+        else:
+            cprint("setting up " + func_name, 'blue')
+            manifest.process_manifest(args.clean, args.prod)
 
 
 def main(args=None):
@@ -32,20 +48,20 @@ def main(args=None):
         func_names |= read_function_names_from_file(args.file)
         cprint("read {} from {}".format(func_names, args.file), 'blue')
 
-    for func_name in func_names:
-        manifest_filename = find_manifest(func_name)
-        if not manifest_filename:
-            cprint("unable to find " + func_name, 'red')
-            exit(1)
-        else:
-            manifest = LambdaManifest(manifest_filename)
-            if args.echo_env:
-                env = env_manager.EnvManager(manifest.runtime)
-                print(env.runtime.env_name)
-                print(manifest.lib_dir)
+    # process manifests in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        all_futures = {executor.submit(find_and_process_manifest, args, func_name): func_name
+                       for func_name in func_names}  # key is the futures object, value is the function name
+
+        for future in concurrent.futures.as_completed(all_futures):
+            func_name = all_futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                cprint("{}: Unhandled exception '{}'".format(func_name, e), 'red')
+                sys.exit(1)
             else:
-                cprint("setting up " + func_name, 'blue')
-                manifest.process_manifest(args.clean, args.prod)
+                cprint(func_name + ': finished processing manifest', 'blue')
 
     # copy activation script to pwd
     this_file_dir = os.path.dirname(os.path.abspath(__file__))
