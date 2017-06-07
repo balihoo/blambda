@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='blambda',
-      version='0.2.2',
+      version='0.2.3',
       description='Balihoo Command Line Tools for AWS Lambda function management',
       author='Gerry Ens',
       author_email='gens@balihoo.com',

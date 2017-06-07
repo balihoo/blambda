@@ -41,7 +41,7 @@ def main(args=None):
 
     func_names = set(args.function_names)
     if args.file:
-        func_names += read_function_names_from_file(args.file)
+        func_names |= read_function_names_from_file(args.file)
         cprint("read {} from {}".format(func_names, args.file), 'blue')
 
     for func_name in func_names:
