@@ -51,14 +51,19 @@ class LambdaManifest(object):
                 cprint("clean install -- removing " + self.lib_dir, 'yellow')
                 shutil.rmtree(self.lib_dir)
             env.install_dependencies(self.lib_dir, **deps_to_install)
-        else:
+
+        elif 'node' in self.runtime:
             moddir = os.path.join(basedir, "node_modules")
             if os.path.exists(moddir) and clean:
                 shutil.rmtree(moddir)
             if not os.path.exists(moddir):
                 os.mkdir(moddir)
+
+            # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
                 spawn("npm install {}@{}".format(dependency, version), show=True, working_directory=basedir)
+        else:
+            raise RuntimeError("Unknown runtime: " + self.runtime)
 
         cprint("All dependencies installed", 'blue')
 

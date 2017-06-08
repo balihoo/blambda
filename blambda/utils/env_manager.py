@@ -5,8 +5,10 @@ Uses pyenv and pyenv-virtualenv to programmatically manage python environments.
 
 import subprocess as sp
 from collections import namedtuple
+import concurrent.futures
 
 import os
+import sys
 
 from termcolor import cprint
 
@@ -72,32 +74,42 @@ class EnvManager(object):
             **dependencies: dict of { 'dependency_name': 'dependency_version' }
 
         """
-        for dep, version in dependencies.items():
-            install_cmd = ['install']
+        with concurrent.futures.ThreadPoolExecutor(max_workers=32) as parallel:
+            all_futures = {parallel.submit(self._install_dependency, dep, lib_dir, version): dep
+                           for dep, version in dependencies.items()}  # key is the futures object, value is the dep
 
-            local = dep.startswith('/home/')
-            linked = version == "link"
-            is_balihoo_repo = 'github.com/balihoo' in dep
+            for future in concurrent.futures.as_completed(all_futures):
+                dep = all_futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    cprint("{}: Unhandled exception when pip installing '{}'".format(dep, e), 'red')
+                    sys.exit(1)
+                else:
+                    cprint('pip: finished installing ' + dep, 'blue')
 
-            # Check if pip should force an upgrade
-            if is_balihoo_repo or (local and not linked):
-                # It's from one of our repos! Assume it's volatile and force an upgrade.
-                install_cmd.append('--upgrade')
-                if 'GITUSER' in os.environ and "https" in dep:
-                    creds = "{}:{}@".format(os.environ['GITUSER'], os.environ['GITPASS'])
-                    dep = dep.replace("https://github", "https://{}github".format(creds))
+    def _install_dependency(self, dep, lib_dir, version):
+        install_cmd = ['install']
+        local = dep.startswith('/home/')
+        linked = version == "link"
+        is_balihoo_repo = 'github.com/balihoo' in dep
+        # Check if pip should force an upgrade
+        if is_balihoo_repo or (local and not linked):
+            # It's from one of our repos! Assume it's volatile and force an upgrade.
+            install_cmd.append('--upgrade')
+            if 'GITUSER' in os.environ and "https" in dep:
+                creds = "{}:{}@".format(os.environ['GITUSER'], os.environ['GITPASS'])
+                dep = dep.replace("https://github", "https://{}github".format(creds))
+        if local and linked:
+            # -e will install the package in dev/editable mode
+            install_cmd.extend(('-e', dep, '-t', lib_dir))
+        else:
+            if version:
+                if dep.startswith("git+"):
+                    dep += "@" + version
+                else:
+                    dep += "==" + version
+            install_cmd.extend([dep, '-t', lib_dir])
 
-            if local and linked:
-                # todo: is the local/linked functionality actually used?  this installs to the base VE instead of lib
-                # -e will install the package in dev/editable mode
-                install_cmd.extend(('-e', dep))
-            else:
-                if version:
-                    if dep.startswith("git+"):
-                        dep += "@" + version
-                    else:
-                        dep += "==" + version
-                install_cmd.extend([dep, '-t', lib_dir])
-
-            # actually install the package using pip
-            sp.check_call([self.pip] + install_cmd)
+        # actually install the package using pip
+        sp.check_call([self.pip] + install_cmd)
