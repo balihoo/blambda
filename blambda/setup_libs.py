@@ -13,11 +13,10 @@ from .utils.lambda_manifest import LambdaManifest
 
 
 def read_function_names_from_file(filename):
-    try:
-        with open(filename) as f:
-            return {line.strip() for line in f}
-    except IOError:
+    if not os.path.isfile(filename):
         return set()
+    with open(filename) as f:
+        return {line.strip() for line in f}
 
 
 def main(args=None):
