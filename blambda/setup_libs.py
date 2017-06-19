@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import argparse
 import shutil
-import subprocess as sp
 
 import os
 
@@ -14,8 +13,11 @@ from .utils.lambda_manifest import LambdaManifest
 
 
 def read_function_names_from_file(filename):
-    with open(filename) as f:
-        return {line.strip() for line in f}
+    try:
+        with open(filename) as f:
+            return {line.strip() for line in f}
+    except IOError:
+        return set()
 
 
 def main(args=None):
