@@ -150,3 +150,13 @@ blambda stale
 ```
 will tell you which functions are out of date compared to the current repo HEAD.
 Supplying the -v (verbose) option will also tell you which files are out of date.
+
+
+## Developing blambda
+
+To set up the development environment, install pyenv using the instructions above,
+then run
+
+```bash
+./ve_setup.sh
+```
