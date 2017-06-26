@@ -3,10 +3,11 @@
 # the virtualenv activate script (otherwise you would need to specify a direct path to this script)
 
 # make sure script was sourced instead of just executed
-if [[ "$(basename "$0" 2> /dev/null)" == "blambda-env" ]]; then
-    (>&2 echo "Error: blambda-env must be sourced.")
-    exit 1
-fi
+### if [[ "$(basename "$0" 2> /dev/null)" == "blambda-env" ]]; then
+###     (>&2 echo "Error: blambda-env must be sourced.")
+###     exit 1
+### fi
+echo "Please source this file instead of running it directly!"
 
 # make sure cmd-line arg was specified
 if [[ -z $1 ]]; then
