@@ -16,10 +16,6 @@ LambdaRuntime = namedtuple('LambdaRuntime', ('name', 'version', 'env_name'))
 py27 = LambdaRuntime('python2.7', '2.7.13', 'blambda-2.7')
 py36 = LambdaRuntime('python3.6', '3.6.1', 'blambda-3.6')
 
-# list of repos that have --process-dependency-links enabled (i.e. this will allow those pip installs to
-# install *their* dependencies straight from VCS via setup.py)
-ALLOW_DEPENDENCY_LINKS = ('fulfillment-coordinator', )
-
 
 class EnvManager(object):
     def __init__(self, runtime):
@@ -115,9 +111,6 @@ class EnvManager(object):
                 else:
                     dep += "==" + version
             install_cmd.extend([dep, '-t', lib_dir])
-
-            if any(repo_name in dep for repo_name in ALLOW_DEPENDENCY_LINKS):
-                install_cmd.append("--process-dependency-links")
 
         # actually install the package using pip
         sp.check_call([self.pip] + install_cmd)

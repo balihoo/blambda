@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(name='blambda',
-      version='0.2.7',
+      version='0.2.8',
       description='Balihoo Command Line Tools for AWS Lambda function management',
-      author='Gerry Ens',
-      author_email='gens@balihoo.com',
+      author='Balihoo Developers',
+      author_email='devall@balihoo.com',
       license='MIT',
       url='git@github.com:balihoo/fulfillment-lambda-functions.git',
       install_requires=['boto3', 'python-dateutil', 'requests', 'termcolor'],
