@@ -17,7 +17,12 @@ rsha = re.compile("([a-z0-9]{40})\s+HEAD.*")
 
 
 def get_git_version(giturl):
-    shas = check_output(['git', 'ls-remote', giturl[4:]])
+    giturl = giturl[4:]
+    if 'GITUSER' in os.environ and "https" in giturl:
+        creds = "{}:{}@".format(os.environ['GITUSER'], os.environ['GITPASS'])
+        giturl = giturl.replace("https://github", "https://{}github".format(creds))
+
+    shas = check_output(['git', 'ls-remote', giturl], universal_newlines=True)
     return rsha.match(shas).groups()[0]
 
 
@@ -41,7 +46,7 @@ def get_py_version(dep):
 
 def get_node_version(module):
     try:
-        version = check_output(['npm', 'view', module, 'version']).strip()
+        version = check_output(['npm', 'view', module, 'version'], universal_newlines=True).strip()
         print("{}: {}".format(module, version))
         return module, version
     except Exception as e:
@@ -102,7 +107,7 @@ def process_manifest(manifest, overrides, only):
 
     template_manifest = "{}.tt2".format(manifest)
     if os.path.isfile(template_manifest):
-        cprint("replacing deps in tt2 " + os.path.basename(template_manifest), 'info')
+        cprint("replacing deps in tt2 " + os.path.basename(template_manifest), 'blue')
         with open(template_manifest) as f:
             tt2data = f.read()
         start = tt2data.find("dependencies")

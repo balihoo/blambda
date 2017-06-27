@@ -105,12 +105,6 @@ before deploying, your dependencies need to be installed. This is a separate ste
 blambda deps new_thing
 ```
 
-For Python, you can choose to have them installed in/with whatever python environment you are in, or to set up an AWS Lambda equivalent 2.7 environment specifically for your function. The latter is convenient for local testing to avoid missing dependencies
-```
-blambda deps new_thing --ve
-```
-
-
 ## deploying your function
 Deploy sets up your lambda function as well as any IAM roles, CloudWatch Events schedules etc.
 ```
