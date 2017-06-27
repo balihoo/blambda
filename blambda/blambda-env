@@ -16,24 +16,34 @@ if [[ -z $1 ]]; then
 fi
 
 # Activate the correct base virtualenv
-BLAMBDA_ENV=(`blambda deps -e $1`)
-if [[ ${BLAMBDA_ENV[0]} != blambda* ]]; then
+BLAMBDA_ENV_AND_LIB=(`blambda deps -e $1`)
+
+if [ -n "$ZSH_VERSION" ]; then
+   BLAMBDA_ENV=${BLAMBDA_ENV_AND_LIB[1]}
+   BLAMBDA_NEW_LIB_PATH=${BLAMBDA_ENV_AND_LIB[2]}
+elif [ -n "$BASH_VERSION" ]; then
+   BLAMBDA_ENV=${BLAMBDA_ENV_AND_LIB[0]}
+   BLAMBDA_NEW_LIB_PATH=${BLAMBDA_ENV_AND_LIB[1]}
+fi
+
+
+if [[ ${BLAMBDA_ENV} != blambda* ]]; then
 	echo "blambda couldn't read the python environment from manifest, aborting!"
 	return 1
 fi
 
-pyenv shell ${BLAMBDA_ENV[0]}  # sets PYENV_VERSION
+pyenv shell ${BLAMBDA_ENV}  # sets PYENV_VERSION
 echo "Activated ${PYENV_VERSION} virtualenv"
 
 # if BLAMBDA_LIB_PATH already exists, then remove
 # it from PYTHONPATH before adding the new one
-if [[ -v BLAMBDA_LIB_PATH ]]; then
+if [ -n "${BLAMBDA_LIB_PATH+1}" ]; then
     echo "Removing ${BLAMBDA_LIB_PATH} from PYTHONPATH"
 	PYTHONPATH=${PYTHONPATH/${BLAMBDA_LIB_PATH}} # remove BLAMBDA_LIB_PATH from PYTHONPATH
 fi
 
 # add the new lib path
-BLAMBDA_LIB_PATH=${BLAMBDA_ENV[1]}
+export BLAMBDA_LIB_PATH=${BLAMBDA_NEW_LIB_PATH}
 PYTHONPATH=${BLAMBDA_LIB_PATH}:${PYTHONPATH}
 
 # clean up any left over leading/trailing colons from PYTHONPATH
