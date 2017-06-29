@@ -111,7 +111,7 @@ Deploy sets up your lambda function as well as any IAM roles, CloudWatch Events 
 blambda deploy test_thing
 ```
 
-## running your function
+## running your function on AWS lambda
 You can run your function right from the commandline
 ```
 blambda exec test_thing
@@ -128,6 +128,28 @@ will do the same as:
 ```
 echo '{ "my": "payload"}' | blambda exec test_thing --payload
 ```
+
+## running your function locally
+
+You can run the local code with `blambda local`.
+
+```bash
+blambda local test_thing
+cat payload.json | blambda local test_thing
+blambda local test_thing --payload '{ "my": "payload"}'
+echo '{ "my": "payload"}' | blambda local test_thing --payload
+```
+
+You can also run unittests using `blambda test`.  The following
+will run the unittests for each function, including the proper
+`lib_*` directory for the corresponding unittest.
+ 
+```bash
+blambda test appnexus/target appnexus/brand hash
+```
+
+Note that `blambda test` requires that your unittest file be named
+`test_<function_name>.py`.
 
 
 ## Seeing the logs

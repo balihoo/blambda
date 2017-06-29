@@ -1,6 +1,6 @@
-from __future__ import print_function
-
-import argparse
+"""
+package and deploy lambda functions
+"""
 import errno
 import glob
 import json
@@ -399,26 +399,22 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
     return set(deployed)
 
 
-def main(args=None):
+def setup_parser(parser):
     """ main function for the deployment script.
         Parses args, calls deploy, outputs success or failure
     """
     global clients
     clients = Clients()
-    parser = argparse.ArgumentParser("package and deploy lambda functions")
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
-    parser.add_argument('--prefix', type=str, help='the prefix for the function',
-                        default=clients.cfg.get('application', ''))
-    parser.add_argument('--account', type=str, help='the account to use for resource permissions',
-                        default=clients.cfg.get('account'))
-    parser.add_argument('--env', type=str, help='the environment this function will run in',
-                        default=clients.cfg.get('environment', ''))
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=clients.cfg.get('application', ''))
+    parser.add_argument('--account', type=str, help='the account to use for resource permissions', default=clients.cfg.get('account'))
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default=clients.cfg.get('environment', ''))
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
     parser.add_argument('--dryrun', help='do not actually send anything to lambda', action='store_true')
 
-    args = parser.parse_args(args)
 
+def run(args):
     fnames = args.function_names
     if args.file:
         with open(args.file) as f:
@@ -440,7 +436,3 @@ def main(args=None):
         cprint("FAILED TO DEPLOY " + ", ".join(map(str, not_deployed)), 'red')
         sys.exit(len(not_deployed))
     cprint("Successfully deployed " + ", ".join(map(str, deployed)), 'blue')
-
-
-if __name__ == '__main__':
-    main()

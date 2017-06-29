@@ -28,6 +28,10 @@ class EnvManager(object):
         return os.path.join(root, 'versions', self.runtime.env_name)
 
     @property
+    def python(self):
+        return os.path.join(self.pyenv, 'bin/python')
+
+    @property
     def pip(self):
         return os.path.join(self.pyenv, 'bin/pip')
 

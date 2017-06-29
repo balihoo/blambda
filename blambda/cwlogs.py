@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+"""
+Get cloudwatch log events for a lambda function. Json output can be fed into tools like decider/dec_stats
+"""
 
-import argparse
 import itertools
 import json
 import re
@@ -111,9 +112,7 @@ def filtered(raw_events, regex):
     return [e for e in raw_events if rfilter.search(e['message'])]
 
 
-def main(args=None):
-    parser = argparse.ArgumentParser("get cloudwatch log events for a lambda function. "
-                                     "Json output can be fed into tools like decider/dec_stats")
+def setup_parser(parser):
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--prefix', type=str, help='the prefix for the function', default='fulfillment')
     parser.add_argument('--env', type=str, help='dev or stage or something', default="dev")
@@ -124,8 +123,9 @@ def main(args=None):
     parser.add_argument('-t', '--to', type=str, help='end time', default="0")
     parser.add_argument('-r', '--filter', type=str, help='regex to filter by', default=None)
     parser.add_argument('--max', type=int, help='maximum number of records to fetch', default=None)
-    args = parser.parse_args(args)
 
+
+def run(args):
     log_group = "/aws/lambda/{}_{}_{}".format(args.prefix, args.function_name, args.env)
 
     from_ms = parse_time(args.fromdt)

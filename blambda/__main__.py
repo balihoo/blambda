@@ -10,12 +10,14 @@ from . import (
     update_versions,
     who_needs_update,
     config,
-    cwlogs
+    cwlogs,
+    local_execute,
+    local_test
 )
 
 
 def main():
-    submap = {
+    available_subparsers = {
         'new': new,
         'deploy': deploy,
         'exec': execute,
@@ -24,17 +26,32 @@ def main():
         'stale': who_needs_update,
         'config': config,
         'logs': cwlogs,
-        'show': show
+        'show': show,
+        'local': local_execute,
+        'test': local_test,
     }
 
-    parser = argparse.ArgumentParser(
-        "Balihoo Command Line Tools for AWS Lambda function management",
-        add_help=False
-    )
-    parser.add_argument('task', choices=submap.keys())
-    args, sub_args = parser.parse_known_args()
+    parser = argparse.ArgumentParser("Balihoo Command Line Tools for AWS Lambda function management")
+    parser.add_argument('--version', action='store_true', help='echo version number and exit')
+    parser.add_argument('-v', '--verbose', action='count', default=0, help='verbose output')
+    subparsers = parser.add_subparsers(dest='cmd')
 
-    submap[args.task].main(sub_args)
+    for subparser_name, submodule in available_subparsers.items():
+        subparser = subparsers.add_parser(subparser_name,
+                                          help=submodule.__doc__,
+                                          description=submodule.__doc__)
+        submodule.setup_parser(subparser)
+
+    args = parser.parse_args()
+
+    if args.version:
+        import pkg_resources
+        print(f"blambda {pkg_resources.require('blambda')[0].version}")
+    else:
+        if args.cmd is None:
+            parser.print_help()
+        else:
+            available_subparsers[args.cmd].run(args)
 
 
 if __name__ == "__main__":

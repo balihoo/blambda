@@ -1,4 +1,6 @@
-import argparse
+"""
+create a new lambda function
+"""
 import json
 
 import os
@@ -14,20 +16,20 @@ handler_code = {
     ]),
 }
 
+runtimes = {
+    'python27': ('python2.7', 'py'),
+    'python36': ('python3.6', 'py'),
+    'coffee': ('nodejs4.3', 'coffee')
+}
 
-def main(args=None):
-    runtimes = {
-        'python27': ('python2.7', 'py'),
-        'python36': ('python3.6', 'py'),
-        'coffee': ('nodejs4.3', 'coffee')
-    }
 
-    parser = argparse.ArgumentParser("create a new lambda function")
+def setup_parser(parser):
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--runtime', type=str, help='which lambda runtime', default='python27', choices=runtimes.keys())
     parser.add_argument('--nodir', help='do not create a directory', action='store_true')
-    args = parser.parse_args(args)
 
+
+def run(args):
     fname = args.function_name
 
     runtime, ext = runtimes[args.runtime]

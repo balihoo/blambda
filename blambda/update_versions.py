@@ -1,5 +1,6 @@
-#!/usr/bin/env python
-import argparse
+"""
+update the versions for the specified lambda functions
+"""
 import json
 import re
 import shutil
@@ -132,8 +133,7 @@ def update_function(fname, overrides, only, search=False):
         print(e)
 
 
-def main(args=None):
-    parser = argparse.ArgumentParser("update the versions for the specified lambda functions")
+def setup_parser(parser):
     parser.add_argument('function_names', nargs='*', type=str, help='the base names of the lambda functions')
     parser.add_argument('--allpy', action='store_true', help='update all python functions')
     parser.add_argument('--allnode', action='store_true', help='update all node functions')
@@ -143,8 +143,8 @@ def main(args=None):
                         help='filename of a json file containing the dependency section of '
                              'a manifest to use instead of the latest versions')
 
-    args = parser.parse_args(args)
 
+def run(args):
     search = True
     if args.allpy or args.allnode:
         term = "python" if args.allpy else "node"

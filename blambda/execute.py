@@ -1,4 +1,6 @@
-import argparse
+"""
+Execute python lambda functions.  This executes the deployed function on AWS.
+"""
 import json
 import sys
 
@@ -10,14 +12,14 @@ from . import config
 cfg = config.load()
 
 
-def main(args=None):
-    parser = argparse.ArgumentParser("execute python lambda functions")
+def setup_parser(parser):
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--payload', type=str, help='the payload function', default=None)
     parser.add_argument('--prefix', type=str, help='the prefix for the function', default=cfg.get('application'))
     parser.add_argument('--env', type=str, help='the environment this function will run in', default=cfg.get('environment'))
-    args = parser.parse_args(args)
 
+
+def run(args):
     payload = args.payload
     if payload is None:
         print("reading payload from stdin")
@@ -49,7 +51,3 @@ def main(args=None):
             print(response)
     else:
         print(response)
-
-
-if __name__ == '__main__':
-    main()

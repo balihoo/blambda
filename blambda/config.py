@@ -1,4 +1,6 @@
-import argparse
+"""
+configure blambda
+"""
 import json
 
 import os
@@ -36,12 +38,13 @@ def load():
     return config
 
 
-def main(args=None):
-    parser = argparse.ArgumentParser("configure blambda")
+def setup_parser(parser):
     parser.add_argument('action', choices=['set_local', 'set_global', 'get'])
     parser.add_argument('variable', choices=['region', 'environment', 'role', 'application', 'account', 'all'])
     parser.add_argument('value', type=str, help='the value to give to the variable', nargs='?')
-    args = parser.parse_args(args)
+
+
+def run(args):
     if args.action == 'set_local':
         save(args.variable, args.value, local=True)
     elif args.action == 'set_global':
@@ -50,7 +53,3 @@ def main(args=None):
         for k, v in sorted(load().items()):
             if args.variable in ('all', k):
                 print("{}: {}".format(k, v))
-
-
-if __name__ == '__main__':
-    main()

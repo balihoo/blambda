@@ -1,6 +1,6 @@
-from __future__ import print_function
-
-import argparse
+"""
+prepare development of python lambda functions
+"""
 import shutil
 
 import os
@@ -19,15 +19,15 @@ def read_function_names_from_file(filename):
         return {line.strip() for line in f}
 
 
-def main(args=None):
-    parser = argparse.ArgumentParser("prepare development of python lambda functions")
+def setup_parser(parser):
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
     parser.add_argument('-c', '--clean', help='clean environment', action='store_true')
     parser.add_argument('-p', '--prod', help='production. Install no dev deps', action='store_true')
     parser.add_argument('-e', '--echo-env', help='return which blambda virtualenv is used', action='store_true')
     parser.add_argument('--file', type=str, help='filename containing function names')
-    args = parser.parse_args(args)
 
+
+def run(args):
     func_names = set(args.function_names)
     if args.file:
         func_names |= read_function_names_from_file(args.file)
@@ -51,7 +51,3 @@ def main(args=None):
     # copy activation script to pwd
     this_file_dir = os.path.dirname(os.path.abspath(__file__))
     shutil.copy(os.path.join(this_file_dir, 'blambda-env'), '.')
-
-
-if __name__ == '__main__':
-    main()
