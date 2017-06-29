@@ -16,7 +16,7 @@ from .utils.lambda_manifest import LambdaManifest
 
 def setup_parser(parser):
     parser.add_argument('function_name', type=str, help='the base name of the function')
-    parser.add_argument('--payload', type=str, help='the payload function', default=None)
+    parser.add_argument('--payload', type=str, help="json-formatted params to send to the function", default=None)
 
 
 def import_lambda_function_from_file(path):
