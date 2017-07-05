@@ -7,7 +7,7 @@ setup(name='blambda',
       author_email='devall@balihoo.com',
       license='MIT',
       url='git@github.com:balihoo/fulfillment-lambda-functions.git',
-      install_requires=['boto3', 'python-dateutil', 'requests', 'termcolor'],
+      install_requires=['boto3', 'python-dateutil', 'requests', 'termcolor', 'lxml', 'beautifulsoup4'],
       packages=find_packages(exclude=['tests']),
       include_package_data=True,
       entry_points={

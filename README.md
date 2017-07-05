@@ -151,6 +151,19 @@ blambda test appnexus/target appnexus/brand hash
 Note that `blambda test` requires that your unittest file be named
 `test_<function_name>.py`.
 
+## intellij help
+
+Running `blambda ide` will add a function's parent and lib_ 
+directories as source folders by rewriting the iml file:
+
+```bash
+blambda ide <function_name>
+```
+
+This should fix any indexing/import issues intellij has for a 
+given lambda function -- you'll need to run this every time
+you switch functions and work on a different one.
+
 
 ## Seeing the logs
 ```

@@ -12,7 +12,8 @@ from . import (
     config,
     cwlogs,
     local_execute,
-    local_test
+    local_test,
+    ide_helper
 )
 
 
@@ -29,6 +30,7 @@ def main():
         'show': show,
         'local': local_execute,
         'test': local_test,
+        'ide': ide_helper,
     }
 
     parser = argparse.ArgumentParser("Balihoo Command Line Tools for AWS Lambda function management")
