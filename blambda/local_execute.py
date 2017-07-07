@@ -39,6 +39,7 @@ def run(args):
     manifest = LambdaManifest(manifest_filename)
     env = env_manager.EnvManager(manifest.runtime)
 
+    sys.path.insert(0, manifest.lib_dir)
     sys.path.insert(0, manifest.basedir)
 
     py_file = os.path.join(manifest.basedir, manifest.function_name + '.py')
