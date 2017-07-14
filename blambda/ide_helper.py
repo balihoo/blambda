@@ -5,14 +5,27 @@ Insert a function's base / lib dirs into intellij's indexing path. This works by
 from pathlib import Path
 
 from bs4 import BeautifulSoup
+from termcolor import cprint
 
 from .utils.findfunc import find_manifest
 from .utils.lambda_manifest import LambdaManifest
 
 
 def find_iml_file(path: Path) -> Path:
+    # if you hit '/', then give up
     if str(path) == path.anchor:
-        raise RuntimeError("Couldn't find intellij project .iml file!")
+        cprint("Couldn't find intellij project .iml file!", 'red')
+        exit(1)
+
+    # look for an .idea directory for older versions of intellij
+    idea_dir = (path / '.idea')
+    if idea_dir.is_dir():
+        try:
+            return next(idea_dir.glob('*.iml'))
+        except StopIteration:
+            pass
+
+    # keep looking in parent directories until you find the .iml file
     try:
         return next(path.glob('*.iml'))
     except StopIteration:
@@ -26,6 +39,10 @@ def setup_parser(parser):
 
 def run(args):
     manifest_filename = find_manifest(args.function_name)
+    if manifest_filename is None:
+        cprint("Couldn't find manifest for " + args.function_name, 'red')
+        exit(1)
+
     manifest = LambdaManifest(manifest_filename)
     lib_dir = Path(manifest.lib_dir)
 
@@ -37,9 +54,12 @@ def run(args):
     content = data.module.component.content
     content.clear()
 
+    # we need directories relative to project root, not the .idea directory
+    parent_dir = iml_file.parent.parent if iml_file.parent.name == '.idea' else iml_file.parent
+
     source_dirs = (
-        lib_dir.parent.relative_to(iml_file.parent),
-        lib_dir.relative_to(iml_file.parent))
+        lib_dir.parent.relative_to(parent_dir),
+        lib_dir.relative_to(parent_dir))
 
     for source_dir in source_dirs:
         content.append(
@@ -49,5 +69,4 @@ def run(args):
     if args.dry_run:
         print(data.prettify())
     else:
-        with iml_file.open('w') as f:
-            print(data.prettify(), file=f)
+        iml_file.write_text(data.prettify())
