@@ -1,32 +1,34 @@
 """
 package and deploy lambda functions
 """
-import errno
-import glob
 import json
+import os
 import shutil
+import subprocess as sp
 import sys
 import tempfile
-from subprocess import (
-    call,
-    CalledProcessError
-)
+from pathlib import Path, PurePath
 
 import boto3
-import os
 from botocore.exceptions import ClientError
 from termcolor import cprint
 
 from . import config
-from .utils.base import spawn, timed
+from .utils.base import spawn, timed, die
 from .utils.findfunc import (
-    all_manifests,
-    find_manifest,
-    split_path
+    find_all_manifests,
+    find_manifest
 )
 from .utils.iam import role_policy_upsert
 from .utils.lambda_manifest import LambdaManifest
 from .utils.vpc import VpcInfo
+
+
+def split_path(path):
+    (basedir, jsonfile) = os.path.split(path)
+    (name, ext) = os.path.splitext(jsonfile)
+    return basedir, name, ext
+
 
 clients = None
 
@@ -47,47 +49,90 @@ def js_name(coffee_file):
     return "{}.js".format(os.path.splitext(coffee_file)[0])
 
 
-def coffee_compile(coffee_file, basedir):
+def coffee_compile(coffee_file, target_dir, npm_bin_dir):
     """ compile a coffee file and return the compiled file's name
     Args:
-        coffee_file (str): name of a file to compile
+        coffee_file (PurePath|str): name of a coffeescript file to compile
+        target_dir (PurePath|str): directory for the compiled .js file
+        npm_bin_dir (PurePath|str): node_modules/.bin dir which should contain the coffee binary
     """
-    compiler = os.path.join(basedir, "node_modules", "coffee-script", "bin", "coffee")
-    command = "{} -bc {}".format(compiler, coffee_file)
-    spawn(command, show=True)
-    return js_name(coffee_file)
+    command = f"{npm_bin_dir}/coffee -o {target_dir} -bc {coffee_file}"
+    spawn(command, show=True, raise_on_fail=True)
 
 
-def copy_with_dir(src, dst):
-    """ copies a file to a destination path, creating the path if it does not exist
-    Args:
-        src (str): path to the file to copy
-        dst (str): path to the file to copy to
-    """
-    try:
-        (path, name) = os.path.split(dst)
-        os.makedirs(path)
-    except OSError as exc:  # Python >2.5
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
+def copy_dependencies(manifest, tmpdir, options):
+    """ Copy dependencies to the temporary directory for packaging """
+    basedir = manifest.basedir
+    data = manifest.manifest
+    fname = manifest.short_name
+
+    if 'python' in manifest.runtime:
+        if data.get('dependencies') and not manifest.lib_dir.is_dir():
+            die("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
+
+        sp.call(f"cp -r {manifest.lib_dir / '*'} {tmpdir}", shell=True)
+
+    elif 'nodejs' in manifest.runtime:
+        node_modules_dir = basedir / "node_modules"
+
+        if data.get('dependencies') and not node_modules_dir.exists():
+            die("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
+
+        shutil.copytree(node_modules_dir, tmpdir / "node_modules")
+        (tmpdir / fname).mkdir()
+        options.update({
+            "Handler": "{0}/{0}.handler".format(fname),
+            "Runtime": "nodejs"
+        })
+
+    else:
+        die("Unknown runtime " + manifest.runtime)
+
+    return options
+
+
+def exec_deploy_hook(data, tmpdir, basedir, before_or_after):
+    """Run the before deploy / after deploy script hooks"""
+    for command in data.get(f'{before_or_after} deploy', []):
+        (ret, out, err) = spawn(f"{command} {tmpdir}", show=True, working_directory=basedir)
+        print('\n'.join(out + err))
+
+
+def copy_source_files(manifest, tmpdir: PurePath):
+    """Copy the specified source files to the packaging temporary directory"""
+    data = manifest.manifest
+    npm_bin_dir = manifest.basedir / 'node_modules' / '.bin'
+
+    for source_spec in data.get('source files', []):
+        if type(source_spec) == list:
+            # e.g. ["../shared/lambda_chain.py", "lambda_chain.py"]
+            src_filename, dest_filename = source_spec
         else:
-            raise
-    shutil.copyfile(src, dst)
+            # .e.g. "config.py"
+            src_filename = dest_filename = source_spec
+            dest_filename = Path(dest_filename).name
+
+        target = tmpdir / dest_filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        src = manifest.basedir / src_filename
+
+        if src.suffix == ".coffee":
+            coffee_compile(coffee_file=src, target_dir=target.parent, npm_bin_dir=npm_bin_dir)
+        else:
+            shutil.copyfile(src=src, dst=str(target))
 
 
-def package(manifest_filename, dryrun=False):
+def package(manifest, dryrun=False):
     """ create an archive containing source files and deps for lambda
     Args:
-        manifest_filename (str): path to the manifest file
+        manifest (LambdaManifest): the manifest object to package
         dryrun (bool): indicates that you're testing, and leaves the tmp dir for inspection
     """
 
-    # todo: clean this up -- some shared logic was moved to LambdaManifest but this isn't complete
-    lambda_manifest = LambdaManifest(manifest_filename)
-
-    basedir = lambda_manifest.basedir
-    fname = lambda_manifest.function_name
-    manifest = lambda_manifest.manifest
+    basedir = manifest.basedir
+    fname = manifest.short_name
+    data = manifest.manifest
 
     # default options
     options = {
@@ -98,74 +143,29 @@ def package(manifest_filename, dryrun=False):
         "Handler": "{}.lambda_handler".format(fname),
     }
 
-    tmpdir = tempfile.mkdtemp()
-    for command in manifest.get('before deploy', []):
-        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, working_directory=basedir)
-        print('\n'.join(out + err))
+    tmpdir = Path(tempfile.mkdtemp())
 
-    # default runtime is python2.7
-    if 'python' in lambda_manifest.runtime:
-        if not os.path.exists(lambda_manifest.lib_dir) and manifest.get('dependencies', {}):
-            raise RuntimeError("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
+    if dryrun:
+        cprint(f"DRYRUN!! -- TEMPDIR: {tmpdir}", 'red')
 
-        call(" ".join(("cp", "-r", os.path.join(lambda_manifest.lib_dir, "*"), tmpdir)), shell=True)
+    exec_deploy_hook(data, tmpdir, basedir, 'before')
 
-    elif 'nodejs' in lambda_manifest.runtime:
-        moddir = os.path.join(basedir, "node_modules")
+    options = copy_dependencies(manifest, tmpdir, options)
+    copy_source_files(manifest, tmpdir)
 
-        if not os.path.exists(moddir) and manifest.get('dependencies', {}):
-            raise RuntimeError("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
+    if 'options' in data:
+        options.update(data['options'])
 
-        shutil.copytree(moddir, os.path.join(tmpdir, "node_modules"))
-        os.mkdir(os.path.join(tmpdir, fname))
-        options.update({
-            "Handler": "{0}/{0}.handler".format(fname),
-            "Runtime": "nodejs"
-        })
+    data['options'] = options
 
-    else:
-        raise RuntimeError("Unknown runtime " + lambda_manifest.runtime)
-
-    def copy_source_file(source, destination_name):
-        for src in glob.glob(source):
-            if src.endswith(".coffee"):
-                compiled = coffee_compile(src, basedir)
-                dst = os.path.abspath(os.path.join(tmpdir, fname, js_name(destination_name)))
-                copy_with_dir(compiled, dst)
-                os.remove(compiled)
-            else:
-                dst = os.path.join(tmpdir, destination_name)
-                copy_with_dir(src, dst)
-
-    for filename in manifest.get('source files', []):
-        srcname = dstname = filename
-        if type(filename) == list:
-            (srcname, dstname) = tuple(filename)
-
-        src = os.path.abspath(os.path.join(basedir, srcname))
-        files = glob.glob(src)
-        if len(files) == 1:
-            copy_source_file(files[0], dstname)
-        elif len(files) > 1:
-            for f in files:
-                base_src = os.path.basename(f)
-                (dest_dir, _) = os.path.split(dstname)
-                destination = os.path.join(dest_dir, base_src)
-                copy_source_file(f, destination)
-
-    if 'options' in manifest:
-        options.update(manifest['options'])
-
-    manifest['options'] = options
-
-    for command in manifest.get('after deploy', []):
-        (ret, out, err) = spawn("{} {}".format(command, tmpdir), show=True, working_directory=basedir)
-        print('\n'.join(out + err))
+    exec_deploy_hook(data, tmpdir, basedir, 'after')
 
     archive = shutil.make_archive(fname, "zip", tmpdir)
-    shutil.rmtree(tmpdir) if not dryrun else cprint("DRYRUN!! -- TEMPDIR: " + tmpdir, 'red')
 
-    return archive, manifest
+    if not dryrun:
+        shutil.rmtree(str(tmpdir))
+
+    return archive
 
 
 def git_sha():
@@ -175,7 +175,7 @@ def git_sha():
         if ret == 0:
             return out[0]
         return ' '.join(err)
-    except CalledProcessError:
+    except sp.CalledProcessError:
         return "no git sha"
 
 
@@ -187,7 +187,7 @@ def git_local_mods():
             return len([c for c in out if len(c.strip()) > 0])
         cprint(' '.join(err), 'red')
         return 0
-    except CalledProcessError:
+    except sp.CalledProcessError:
         return 0
 
 
@@ -276,7 +276,10 @@ def publish(name, role, zipfile, options, dryrun):
         role (str): arn of the role to use
         zipfile (str): the archive containing function code
         options (dict): AWS Lambda configuration options
-        returns the arn of the new or updated function
+        dryrun: (bool): Only publish if False
+
+    Returns:
+         str: the arn of the new or updated function
     """
     client = clients.lambda_client
 
@@ -284,7 +287,7 @@ def publish(name, role, zipfile, options, dryrun):
     mods = "!" * git_local_mods()
     description = options.get("Description", "")
     options['Description'] = "{} [SHA {}{}]".format(description, sha, mods)
-    if not 'Role' in options:
+    if 'Role' not in options:
         options['Role'] = role
 
     with open(zipfile, 'rb') as f:
@@ -321,49 +324,45 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
         function_names (list(str)): list of function names
         env (str): the environment to deploy to
         prefix (srt): string to prefix the function name with
-        role (str): the role to use for the function
+        override_role_arn (str): the role to use for the function
+        account (str): the account to use for resource permissions
         dryrun (bool): prevents AWS publish and retains tmpdir / zipfile
     """
     deployed = []
 
     for fname in function_names:
         with timed("find manifest"):
-            name = find_manifest(fname)
-        if name:
+            manifest = find_manifest(fname)
+        if manifest:
             print("Deploying function '{}'...".format(fname))
-            group = os.path.basename(os.path.dirname(name))
-            (zipfile, manifest) = package(name, dryrun)
-            (basedir, basename, ext) = split_path(zipfile)
-            # If the function name doesn't match it's parent folder, let's include the folder name
-            # as part of the function name.. so timezone/timezone -> timezone and adwords/textad -> adwords_textad
-            whole_name = basename
-            if not basename.startswith(group):
-                whole_name = "{}_{}".format(group, basename)
-            function_name = "{}_{}_{}".format(prefix.lower(), whole_name, env.lower())
+
+            zipfile = package(manifest, dryrun)
+            manifest_data = manifest.manifest
+            function_name = "_".join([prefix.lower(), manifest.full_name, env.lower()]).replace('/', '_')
 
             # VPC setup
-            vpcid = manifest.get('options', {}).get('VpcConfig', {}).get('VpcId')
-            vpc = manifest.get('vpc', False)
+            vpcid = manifest_data.get('options', {}).get('VpcConfig', {}).get('VpcId')
+            vpc = manifest_data.get('vpc', False)
             if vpcid:
                 # this is not a valid option for boto, but it should be
-                del manifest['options']['VpcConfig']['VpcId']
+                del manifest_data['options']['VpcConfig']['VpcId']
                 with timed("get vpc by id"):
-                    manifest['options']['VpcConfig'] = get_vpc_config(vpcid)
+                    manifest_data['options']['VpcConfig'] = get_vpc_config(vpcid)
             elif vpc:
                 with timed("get vpc without id"):
-                    manifest['options']['VpcConfig'] = get_vpc_config()
+                    manifest_data['options']['VpcConfig'] = get_vpc_config()
 
             # Role setup
             role_arn = override_role_arn
             if not role_arn:
-                if 'permissions' in manifest:
+                if 'permissions' in manifest_data:
                     with timed("setup role"):
                         role_arn = role_policy_upsert(
                             function_name,
-                            manifest['permissions'],
+                            manifest_data['permissions'],
                             account,
                             bool(vpc or vpcid),
-                            'schedule' in manifest,
+                            'schedule' in manifest_data,
                             dryrun
                         )
                     if not role_arn:
@@ -380,13 +379,13 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
             if role_arn:
                 # Publishing
                 with timed("publish"):
-                    (fullname, arn) = publish(function_name, role_arn, zipfile, manifest['options'], dryrun)
+                    (fullname, arn) = publish(function_name, role_arn, zipfile, manifest_data['options'], dryrun)
                 os.remove(zipfile)
 
                 # Schedule setup
-                if 'schedule' in manifest:
+                if 'schedule' in manifest_data:
                     with timed("schedule setup"):
-                        setup_schedule(fullname, arn, role_arn, manifest['schedule'], dryrun)
+                        setup_schedule(fullname, arn, role_arn, manifest_data['schedule'], dryrun)
 
                 deployed.append(fname)
                 print("Success!\n")
@@ -405,13 +404,17 @@ def setup_parser(parser):
     """
     global clients
     clients = Clients()
+    env = clients.cfg.get('environment', '')
+    account = clients.cfg.get('account')
+    app = clients.cfg.get('application', '')
+
     parser.add_argument('function_names', nargs='*', type=str, help='the base name of the function')
-    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=clients.cfg.get('application', ''))
-    parser.add_argument('--account', type=str, help='the account to use for resource permissions', default=clients.cfg.get('account'))
-    parser.add_argument('--env', type=str, help='the environment this function will run in', default=clients.cfg.get('environment', ''))
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=app)
+    parser.add_argument('--account', type=str, help='the account to use for resource permissions', default=account)
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default=env)
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
-    parser.add_argument('--dryrun', help='do not actually send anything to lambda', action='store_true')
+    parser.add_argument('--dryrun', '--dry-run', help='do not actually send anything to lambda', action='store_true')
 
 
 def run(args):
@@ -425,7 +428,8 @@ def run(args):
     if len(fnames) < 1:
         cprint("NO PACKAGE PROVIDED", 'red')
         cprint("Choose one of the following:", 'blue')
-        print("  " + "\n  ".join(all_manifests(".")))
+        for m in find_all_manifests("."):
+            print("  " + m.full_name)
         sys.exit(-1)
 
     deployed = deploy(fnames, args.env, args.prefix, args.role, args.account, args.dryrun)

@@ -37,7 +37,7 @@ def run(args):
         if args.verbose > 1:
             fancy_print("PYTHONPATH", os.environ['PYTHONPATH'])
 
-        test_file = os.path.join(manifest.basedir, f'test_{manifest.function_name}.py')
+        test_file = os.path.join(manifest.basedir, f'test_{manifest.short_name}.py')
 
         fancy_print("Testing", test_file)
         sp.call([env.python, '-m', 'unittest', test_file])

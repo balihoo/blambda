@@ -1,7 +1,6 @@
 """
 list functions that need updating
 """
-import os
 
 from .utils.diffs import who_needs_update
 
@@ -16,9 +15,7 @@ def setup_parser(parser):
 
 
 def run(args):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
     funcs = who_needs_update(
-        this_dir,
         args.env,
         from_sha_file=args.fromshas,
         to_sha_file=args.toshas,

@@ -10,9 +10,11 @@ from subprocess import check_output
 
 import os
 import requests
+from pathlib import Path
 from termcolor import cprint
 
-from .utils.findfunc import find_manifest, all_manifests, get_runtime
+from .utils.lambda_manifest import LambdaManifest
+from .utils.findfunc import find_manifest, find_all_manifests
 
 rsha = re.compile("([a-z0-9]{40})\s+HEAD.*")
 
@@ -86,13 +88,12 @@ def dep_update(name, get_version, deps, overrides, only):
 
 
 def process_manifest(manifest, overrides, only):
-    with open(manifest) as f:
-        data = json.load(f)
-    runtime = data.get('options', {}).get('Runtime', "")
+    data = manifest.manifest
+    runtime = manifest.runtime
     if "node" in runtime:
-        get_version = get_node_version
+        get_version_func = get_node_version
     elif "python" in runtime:
-        get_version = get_py_version
+        get_version_func = get_py_version
     else:
         cprint("unable to determine runtime language f or {}\n"
                "Make sure the manifest contains options/Runtime".format(manifest),
@@ -100,37 +101,44 @@ def process_manifest(manifest, overrides, only):
         return
 
     # update the deps in place
-    dep_update(os.path.basename(manifest), get_version, data['dependencies'], overrides, only)
+    dep_update(manifest.path.name, get_version_func, data['dependencies'], overrides, only)
 
-    shutil.copy(manifest, "{}.bak".format(manifest))
-    with open(manifest, "w") as f:
+    shutil.copy(manifest.path, str(manifest.path) + '.bak')
+    with manifest.path.open("w") as f:
         json.dump(data, f, indent=4, sort_keys=True, separators=(',', ': '))
 
-    template_manifest = "{}.tt2".format(manifest)
-    if os.path.isfile(template_manifest):
-        cprint("replacing deps in tt2 " + os.path.basename(template_manifest), 'blue')
-        with open(template_manifest) as f:
-            tt2data = f.read()
+    template_manifest = Path(str(manifest.path) + ".tt2")
+    if template_manifest.is_file():
+        cprint("replacing deps in tt2 " + template_manifest.name, 'blue')
+        tt2data = template_manifest.read_text()
+
+        # find the dependencies section
         start = tt2data.find("dependencies")
         (start, end) = get_block(tt2data, start_pos=start)
         tt2deps = json.loads(tt2data[start:end])
-        newdeps = dep_update(os.path.basename(template_manifest), get_version, tt2deps, overrides, only)
+
+        # replace with new dependencies
+        newdeps = dep_update(os.path.basename(template_manifest), get_version_func, tt2deps, overrides, only)
         dep_json = json.dumps(newdeps, indent=8, sort_keys=True, separators=(',', ': '))
+
+        # splice the new dependencies back in / write to file
         tt2data = tt2data[:start] + dep_json + tt2data[end:]
-        shutil.copy(template_manifest, "{}.bak".format(template_manifest))
-        with open(template_manifest, "w") as f:
-            f.write(tt2data)
+        shutil.copy(str(template_manifest), str(template_manifest) + ".bak")
+        template_manifest.write_text(tt2data)
 
 
-def update_function(fname, overrides, only, search=False):
-    try:
-        manifest = find_manifest(fname) if search else fname
-        if manifest:
-            process_manifest(manifest, overrides, only)
-        else:
-            cprint(fname + " not found", 'red')
-    except Exception as e:
-        print(e)
+def update_function(function, overrides, only):
+    if isinstance(function, LambdaManifest):
+        process_manifest(function, overrides, only)
+    else:
+        try:
+            manifest = find_manifest(function)
+            if manifest:
+                process_manifest(manifest, overrides, only)
+            else:
+                cprint(function + " not found", 'red')
+        except Exception as e:
+            print(e)
 
 
 def setup_parser(parser):
@@ -145,12 +153,10 @@ def setup_parser(parser):
 
 
 def run(args):
-    search = True
     if args.allpy or args.allnode:
         term = "python" if args.allpy else "node"
-        manifests = all_manifests(".", verbose=0, ignore_errors=True, full_paths=True)
-        fnames = [name for name in manifests if term in get_runtime(name)]
-        search = False
+        manifests = find_all_manifests(".", verbose=0)
+        fnames = [m for m in manifests if term in m.runtime]
     elif args.file:
         with open(args.file) as f:
             fnames = [l.strip() for l in f.readlines()]
@@ -169,4 +175,4 @@ def run(args):
 
     fnames = set(fnames)
     with ThreadPoolExecutor(max_workers=32) as tpx:
-        tpx.map(lambda fname: update_function(fname, overrides, args.only, search), fnames)
+        tpx.map(lambda fname: update_function(fname, overrides, args.only), fnames)

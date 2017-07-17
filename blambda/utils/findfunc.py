@@ -1,44 +1,52 @@
-import json
-
 import os
+
 from termcolor import cprint
 
 from .base import spawn, json_fileload
-
-try:
-    import boto3
-except ImportError:
-    print("Unable to import boto")
+from .lambda_manifest import LambdaManifest
 
 
-def all_json_files(root):
+def find_manifest(function_name):
+    """Find an individual manifest given a function name"""
+    manifests = find_all_manifests(_get_search_root())
+    matching = [m for m in manifests if function_name in (m.short_name, m.full_name)]
+    if not matching:
+        return None
+
+    # prefer the manifest in pwd, if possible
+    if len(matching) > 1:
+        for match in matching:
+            if match.basedir.samefile('.'):
+                return match
+
+    # otherwise just return the first available match
+    return matching[0]
+
+
+def find_manifests(function_names):
+    """Find a set of manifests given a set of function name"""
+    manifests = find_all_manifests(_get_search_root())
+
+    # get manifests where either short_name or full_name is in the function_names list
+    return [m for m in manifests if any(name in function_names for name in (m.short_name, m.full_name))]
+
+
+def find_all_manifests(root, verbose=False):
+    """Find all manifests in a given directory/root"""
+    json_files = _all_json_files(root)
+    manifests = (_load_manifest(json_file, verbose) for json_file in json_files)
+    return [m for m in manifests if m]
+
+
+def _all_json_files(root):
     return [os.path.join(r, f) for r, _, fs in os.walk(root) for f in fs if f.endswith('.json')]
 
 
-def split_path(path):
-    (basedir, jsonfile) = os.path.split(path)
-    (name, ext) = os.path.splitext(jsonfile)
-    return basedir, name, ext
-
-
-def find_manifest(pkgname, srcdir="."):
-    return find_manifests([pkgname]).get(pkgname)
-
-
-def find_manifests(pkgnames, verbose=True):
-    """ return a dictionary keyed by pkgname with the found manifest's full path """
-    (abspath, dirname) = (os.path.abspath, os.path.dirname)
+def _get_search_root():
     (ret, stdout, stderr) = spawn("git rev-parse --show-toplevel")
-    root = stdout[0] if ret == 0 else os.getcwd()
-    jsonfiles = all_json_files(root)
-
-    def ensure_json(pkgname):
-        return pkgname if pkgname.endswith(".json") else "{}.json".format(pkgname)
-
-    def match(pkg, jsonfile):
-        return jsonfile.endswith(ensure_json(pkg)) and is_manifest(jsonfile, verbose)
-
-    return {p: j for p in pkgnames for j in jsonfiles if match(p, j)}
+    if ret == 0:
+        return stdout[0]
+    return os.getcwd()
 
 
 def get_runtime(manifest_path):
@@ -50,41 +58,16 @@ def get_runtime(manifest_path):
         cprint("{} is not valid json: {}".format(manifest_path, e), 'red')
 
 
-def is_manifest(path, verbose=True, raise_on_bad_json=False):
+def _load_manifest(filename, verbose=True):
     try:
-        # hacky exclusions of files over 10k
-        if os.path.getsize(path) < 10000:
-            with open(path) as f:
-                manifest = None
-                try:
-                    manifest = json.load(f)
-                except ValueError as e:
-                    msg = "{} is not valid json: {}".format(path, e)
-                    if raise_on_bad_json:
-                        raise Exception(msg)
-                    elif verbose:
-                        cprint(msg, 'red')
-                return type(manifest) == dict and manifest.get('blambda') == "manifest"
-    except OSError as e:
+        return LambdaManifest(filename)
+    except ValueError as e:
         if verbose:
-            cprint("unhandled exception processing {}".format(path), 'red')
-    return False
-
-
-def all_manifests(srcdir, verbose=False, ignore_errors=False, full_paths=False):
-    """ find all paths containing a package file """
-    paths = all_json_files(srcdir)
-    manifests = []
-    for path in paths:
-        if is_manifest(path, verbose=verbose, raise_on_bad_json=not ignore_errors):
-            if full_paths:
-                manifests.append(path)
-            else:
-                manifests.append(split_path(path)[1])
-    return sorted(manifests)
+            cprint(e, 'red')
 
 
 def all_remote_functions(region="us-east-1"):
+    import boto3
     lmb = boto3.client('lambda', region_name=region)
     functions = {}
 

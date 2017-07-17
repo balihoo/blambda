@@ -4,23 +4,86 @@ import re
 import shutil
 
 import os
+
+from pathlib import Path
 from termcolor import cprint
 
 from . import env_manager
 from .base import spawn, is_string
-from .findfunc import split_path
+
+
+def lazy_property(func):
+    attr = '__lazy_property' + func.__name__
+
+    @property
+    def _lazy_property(self):
+        if not hasattr(self, attr):
+            setattr(self, attr, func(self))
+        return getattr(self, attr)
+
+    return _lazy_property
 
 
 class LambdaManifest(object):
+    MAX_FILESIZE = 10000
+
     def __init__(self, manifest_filename):
         super(LambdaManifest, self).__init__()
+        self.path = Path(manifest_filename).absolute()
+        self.manifest = self.load_and_validate(manifest_filename)
+
+    def __repr__(self):
+        return f"<LambdaManifest({self.full_name})>"
+
+    def __hash__(self):
+        return self.full_name
+
+    def load_and_validate(self, manifest_filename):
+        if os.path.getsize(manifest_filename) > self.MAX_FILESIZE:
+            raise ValueError(f'Manifest too large: "{manifest_filename}"')
 
         with open(manifest_filename) as f:
-            self.manifest = json.load(f)
+            manifest = json.load(f)
 
-        (self.basedir, self.function_name, _) = split_path(manifest_filename)
-        self.lib_dir = os.path.join(self.basedir, "lib_{}".format(self.function_name.split('/')[-1]))
-        self.runtime = self.manifest.get('options', {}).get('Runtime', 'python2.7').lower()
+        if type(manifest) != dict or manifest.get('blambda') != "manifest":
+            raise ValueError(f'Manifest not valid: "{manifest_filename}"')
+
+        return manifest
+
+    @lazy_property
+    def basedir(self):
+        return self.path.parent
+
+    @lazy_property
+    def group(self):
+        return self.path.parent.stem
+
+    @lazy_property
+    def short_name(self):
+        return self.path.stem
+
+    @lazy_property
+    def full_name(self):
+        """ Function name (e.g. 'timezone' or 'adwords/textad')
+
+        If the function name doesn't match it's parent folder, let's include the folder name
+        as part of the function name.. so timezone/timezone -> timezone, but adwords/textad -> adwords/textad
+
+        Returns:
+            str: collapsed function/group name
+        """
+        func = self.path.stem
+        if self.group in func:
+            return func
+        return self.group + '/' + func
+
+    @lazy_property
+    def lib_dir(self):
+        return self.basedir / ('lib_' + self.short_name)
+
+    @lazy_property
+    def runtime(self):
+        return self.manifest.get('options', {}).get('Runtime', 'python2.7').lower()
 
     def process_manifest(self, clean=False, prod=False):
         """ loads a manifest file, executes pre and post hooks and installs dependencies

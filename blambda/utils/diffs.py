@@ -18,10 +18,11 @@ def needs_update(manifest, sha_from, sha_to, show_diff=False, verbose=False):
         if verbose:
             print(msg)
 
-    basename = os.path.splitext(os.path.basename(manifest))[0]
-    files = json_fileload(manifest).get("source files", [])
+    basename = os.path.splitext(os.path.basename(manifest.path))[0]
+    print(basename, manifest.path)
+    files = manifest.manifest.get("source files", [])
     files = [f[0] if type(f) == list else f for f in files]
-    files = [os.path.abspath(os.path.join(os.path.dirname(manifest), f)) for f in files]
+    files = [os.path.abspath(os.path.join(os.path.dirname(manifest.path), f)) for f in files]
     files = [glob.glob(f) for f in files]
     files = [f for fs in files for f in fs]
 
@@ -101,7 +102,7 @@ def potentials_from_file(filename):
     return shafuncs, [], potential_mfts
 
 
-def who_needs_update(root, env="", from_sha_file=None, to_sha_file=None, show_diffs=False, verbose=True):
+def who_needs_update(env="", from_sha_file=None, to_sha_file=None, show_diffs=False, verbose=True):
     def vprint(msg):
         if verbose:
             print(msg)
@@ -118,14 +119,14 @@ def who_needs_update(root, env="", from_sha_file=None, to_sha_file=None, show_di
     toshas = json_fileload(to_sha_file) if to_sha_file else {}
 
     vprint("{} potential manifests".format(len(potentials)))
-    manifests = find_manifests(potentials, verbose=False)
+    manifests = find_manifests(potentials)
     vprint("{} actual manifests".format(len(manifests)))
 
-    def _needs_update(manifest, name):
-        key = name.replace("/", "_")
+    def _needs_update(manifest):
+        key = manifest.full_name.replace("/", "_")
         fromsha = fromshas[key]
         tosha = toshas.get(key, 'HEAD')
         return needs_update(manifest, fromsha, tosha, show_diffs, verbose)
 
-    outdated = [name for (name, manifest) in manifests.items() if _needs_update(manifest, name)]
-    return outdated + list(find_manifests(noshas).keys())
+    outdated = [m for m in manifests if _needs_update(m)] + find_manifests(noshas)
+    return [m.full_name for m in outdated]
