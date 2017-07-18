@@ -38,12 +38,11 @@ def setup_parser(parser):
 
 
 def run(args):
-    manifest_filename = find_manifest(args.function_name)
-    if manifest_filename is None:
+    manifest = find_manifest(args.function_name)
+    if manifest is None:
         cprint("Couldn't find manifest for " + args.function_name, 'red')
         exit(1)
 
-    manifest = LambdaManifest(manifest_filename)
     lib_dir = Path(manifest.lib_dir)
 
     iml_file = find_iml_file(lib_dir)

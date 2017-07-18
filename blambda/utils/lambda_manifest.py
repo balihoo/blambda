@@ -82,6 +82,10 @@ class LambdaManifest(object):
         return self.basedir / ('lib_' + self.short_name)
 
     @lazy_property
+    def deployed_name(self):
+        return self.full_name.replace('/', '_')
+
+    @lazy_property
     def runtime(self):
         return self.manifest.get('options', {}).get('Runtime', 'python2.7').lower()
 
@@ -132,6 +136,7 @@ class LambdaManifest(object):
 
         for source in manifest['source files']:
             # check for files that are to be moved and link them
+            # todo: refactor this - use pathlib / remove wildcard support (not used)
             if type(source) in (tuple, list):
                 (src, dst) = source
                 src = os.path.abspath(os.path.join(basedir, src))

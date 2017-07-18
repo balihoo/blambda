@@ -8,7 +8,7 @@ from .lambda_manifest import LambdaManifest
 
 def find_manifest(function_name):
     """Find an individual manifest given a function name"""
-    manifests = find_all_manifests(_get_search_root())
+    manifests = find_all_manifests(get_search_root())
     matching = [m for m in manifests if function_name in (m.short_name, m.full_name)]
     if not matching:
         return None
@@ -25,7 +25,7 @@ def find_manifest(function_name):
 
 def find_manifests(function_names):
     """Find a set of manifests given a set of function name"""
-    manifests = find_all_manifests(_get_search_root())
+    manifests = find_all_manifests(get_search_root())
 
     # get manifests where either short_name or full_name is in the function_names list
     return [m for m in manifests if any(name in function_names for name in (m.short_name, m.full_name))]
@@ -42,7 +42,7 @@ def _all_json_files(root):
     return [os.path.join(r, f) for r, _, fs in os.walk(root) for f in fs if f.endswith('.json')]
 
 
-def _get_search_root():
+def get_search_root():
     (ret, stdout, stderr) = spawn("git rev-parse --show-toplevel")
     if ret == 0:
         return stdout[0]
