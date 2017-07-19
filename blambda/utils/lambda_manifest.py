@@ -1,11 +1,9 @@
-import glob
 import json
+import os
 import re
 import shutil
-
-import os
-
 from pathlib import Path
+
 from termcolor import cprint
 
 from . import env_manager
@@ -13,6 +11,11 @@ from .base import spawn, is_string
 
 
 def lazy_property(func):
+    """ Properties decorated with this will be lazy evaluated and stored.
+
+    This is used so that we don't end up recalculating a bunch of path logic unnecessarily.
+
+    """
     attr = '__lazy_property' + func.__name__
 
     @property
@@ -25,6 +28,12 @@ def lazy_property(func):
 
 
 class LambdaManifest(object):
+    """ LambdaManifest reads the manifest.json / directory structure to handle lambda function metadata
+
+    Figures out the lambda function name / group based on the directory structure
+    Validates / parses the manifest .json file to get dependencies / runtime / source files / etc...
+
+    """
     MAX_FILESIZE = 10000
 
     def __init__(self, manifest_filename):
