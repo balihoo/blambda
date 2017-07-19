@@ -73,7 +73,7 @@ class LambdaManifest(object):
             str: collapsed function/group name
         """
         func = self.path.stem
-        if self.group in func:
+        if self.group == func:
             return func
         return self.group + '/' + func
 

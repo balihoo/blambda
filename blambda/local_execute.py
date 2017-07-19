@@ -11,12 +11,11 @@ from termcolor import cprint
 from .local_test import fancy_print
 from .utils import env_manager
 from .utils.findfunc import find_manifest
-from .utils.lambda_manifest import LambdaManifest
 
 
 def setup_parser(parser):
     parser.add_argument('function_name', type=str, help='the base name of the function')
-    parser.add_argument('--payload', type=str, help="json-formatted params to send to the function", default=None)
+    parser.add_argument('--payload', type=str, help="file containing json params to send to the function", default=None)
 
 
 def import_lambda_function_from_file(path):
@@ -35,12 +34,11 @@ def run(args):
         with open(payload, 'r') as f:
             payload = json.load(f)
 
-    manifest_filename = find_manifest(args.function_name)
-    manifest = LambdaManifest(manifest_filename)
+    manifest = find_manifest(args.function_name)
     env = env_manager.EnvManager(manifest.runtime)
 
-    sys.path.insert(0, manifest.lib_dir)
-    sys.path.insert(0, manifest.basedir)
+    sys.path.insert(0, str(manifest.lib_dir))
+    sys.path.insert(0, str(manifest.basedir))
 
     py_file = os.path.join(manifest.basedir, manifest.short_name + '.py')
 
