@@ -96,7 +96,7 @@ class LambdaManifest(object):
           clean (bool): whether or not to clean out the dependencies dir
           prod (bool): if true, do not install development dependencies
         """
-
+        # todo: does this logic belong here?
         manifest = self.manifest
         basedir = self.basedir
 
@@ -134,36 +134,21 @@ class LambdaManifest(object):
 
         cprint("All dependencies installed", 'blue')
 
-        for source in manifest['source files']:
+        for source_spec in manifest['source files']:
             # check for files that are to be moved and link them
-            # todo: refactor this - use pathlib / remove wildcard support (not used)
-            if type(source) in (tuple, list):
-                (src, dst) = source
-                src = os.path.abspath(os.path.join(basedir, src))
-                (dest_dir, _) = os.path.split(dst)
-                dst = os.path.abspath(os.path.join(basedir, dst))
-                if dest_dir:
-                    dest_dir = os.path.abspath(os.path.join(basedir, dest_dir))
-                    try:
-                        os.makedirs(dest_dir)
-                    except OSError:
-                        pass
-                # wildcards are allowed
-                files = glob.glob(src)
-                if len(files) == 0:
-                    cprint("no glob for " + src, 'blue')
-                for srcf in files:
-                    srcf = os.path.abspath(srcf)
-                    dstf = dst if len(files) == 1 else os.path.join(dest_dir, os.path.basename(srcf))
-                    if not os.path.exists(dstf):
-                        spawn(
-                            "ln -s {} {}".format(srcf, dstf),
-                            show=True,
-                            working_directory=basedir,
-                            raise_on_fail=True
-                        )
-                    else:
-                        cprint("Not (re)linking {} to {}, destination exists".format(srcf, dstf), 'blue')
+            if type(source_spec) in (tuple, list):
+                (src, dst) = source_spec
+                src = (basedir / src).resolve()
+                dst = basedir / dst
+
+                dst.parent.mkdir(parents=True, exist_ok=True)
+
+                if not dst.exists():
+                    dst.symlink_to(src)
+                elif dst.is_symlink():
+                    cprint(f"Not (re)linking {src} to {dst}, destination exists", 'blue')
+                else:
+                    cprint(f"Can't symlink: {dst} exists, but is not a symlink", 'red')
 
         for command in manifest.get('after setup', []):
             spawn(command, show=True, working_directory=basedir, raise_on_fail=True)
