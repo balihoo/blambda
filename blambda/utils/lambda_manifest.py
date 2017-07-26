@@ -82,9 +82,10 @@ class LambdaManifest(object):
             str: collapsed function/group name
         """
         func = self.path.stem
-        if self.group == func:
+        group = self.group
+        if func.startswith(group):
             return func
-        return self.group + '/' + func
+        return group + '/' + func
 
     @lazy_property
     def lib_dir(self):
