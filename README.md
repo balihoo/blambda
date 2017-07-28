@@ -29,6 +29,7 @@ sudo apt-get install libbz2-dev
 
 ## installation
 ```
+pyenv install -s 3.6.1 && pyenv shell 3.6.1   # install blambda to a 3.6.1 environment 
 pip install git+https://github.com/balihoo/blambda.git
 ```
 
