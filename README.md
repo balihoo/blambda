@@ -137,7 +137,7 @@ You can run the local code with `blambda local`.
 ```bash
 blambda local test_thing
 cat payload.json | blambda local test_thing
-blambda local test_thing --payload '{ "my": "payload"}'
+blambda local test_thing --payload payload.json
 echo '{ "my": "payload"}' | blambda local test_thing --payload
 ```
 

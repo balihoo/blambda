@@ -13,10 +13,12 @@ cfg = config.load()
 
 
 def setup_parser(parser):
+    app = cfg.get('application')
+    env = cfg.get('environment')
     parser.add_argument('function_name', type=str, help='the base name of the function')
     parser.add_argument('--payload', type=str, help='the payload function', default=None)
-    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=cfg.get('application'))
-    parser.add_argument('--env', type=str, help='the environment this function will run in', default=cfg.get('environment'))
+    parser.add_argument('--prefix', type=str, help='the prefix for the function', default=app)
+    parser.add_argument('--env', type=str, help='the environment this function will run in', default=env)
 
 
 def run(args):

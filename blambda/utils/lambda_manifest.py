@@ -1,26 +1,103 @@
-import glob
 import json
+import os
 import re
 import shutil
+from pathlib import Path
 
-import os
 from termcolor import cprint
 
 from . import env_manager
 from .base import spawn, is_string
-from .findfunc import split_path
+
+
+def lazy_property(func):
+    """ Properties decorated with this will be lazy evaluated and stored.
+
+    This is used so that we don't end up recalculating a bunch of path logic unnecessarily.
+
+    """
+    attr = '__lazy_property' + func.__name__
+
+    @property
+    def _lazy_property(self):
+        if not hasattr(self, attr):
+            setattr(self, attr, func(self))
+        return getattr(self, attr)
+
+    return _lazy_property
 
 
 class LambdaManifest(object):
+    """ LambdaManifest reads the manifest.json / directory structure to handle lambda function metadata
+
+    Figures out the lambda function name / group based on the directory structure
+    Validates / parses the manifest .json file to get dependencies / runtime / source files / etc...
+
+    """
+    MAX_FILESIZE = 10000
+
     def __init__(self, manifest_filename):
         super(LambdaManifest, self).__init__()
+        self.path = Path(manifest_filename).absolute()
+        self.manifest = self.load_and_validate(manifest_filename)
+
+    def __repr__(self):
+        return f"<LambdaManifest({self.full_name})>"
+
+    def __hash__(self):
+        return self.full_name
+
+    def load_and_validate(self, manifest_filename):
+        if os.path.getsize(manifest_filename) > self.MAX_FILESIZE:
+            raise ValueError(f'Manifest too large: "{manifest_filename}"')
 
         with open(manifest_filename) as f:
-            self.manifest = json.load(f)
+            manifest = json.load(f)
 
-        (self.basedir, self.function_name, _) = split_path(manifest_filename)
-        self.lib_dir = os.path.join(self.basedir, "lib_{}".format(self.function_name.split('/')[-1]))
-        self.runtime = self.manifest.get('options', {}).get('Runtime', 'python2.7').lower()
+        if type(manifest) != dict or manifest.get('blambda') != "manifest":
+            raise ValueError(f'Manifest not valid: "{manifest_filename}"')
+
+        return manifest
+
+    @lazy_property
+    def basedir(self):
+        return self.path.parent
+
+    @lazy_property
+    def group(self):
+        return self.path.parent.stem
+
+    @lazy_property
+    def short_name(self):
+        return self.path.stem
+
+    @lazy_property
+    def full_name(self):
+        """ Function name (e.g. 'timezone' or 'adwords/textad')
+
+        If the function name doesn't match it's parent folder, let's include the folder name
+        as part of the function name.. so timezone/timezone -> timezone, but adwords/textad -> adwords/textad
+
+        Returns:
+            str: collapsed function/group name
+        """
+        func = self.path.stem
+        group = self.group
+        if func.startswith(group):
+            return func
+        return group + '/' + func
+
+    @lazy_property
+    def lib_dir(self):
+        return self.basedir / ('lib_' + self.short_name)
+
+    @lazy_property
+    def deployed_name(self):
+        return self.full_name.replace('/', '_')
+
+    @lazy_property
+    def runtime(self):
+        return self.manifest.get('options', {}).get('Runtime', 'python2.7').lower()
 
     def process_manifest(self, clean=False, prod=False):
         """ loads a manifest file, executes pre and post hooks and installs dependencies
@@ -29,7 +106,7 @@ class LambdaManifest(object):
           clean (bool): whether or not to clean out the dependencies dir
           prod (bool): if true, do not install development dependencies
         """
-
+        # todo: does this logic belong here?
         manifest = self.manifest
         basedir = self.basedir
 
@@ -67,35 +144,21 @@ class LambdaManifest(object):
 
         cprint("All dependencies installed", 'blue')
 
-        for source in manifest['source files']:
+        for source_spec in manifest['source files']:
             # check for files that are to be moved and link them
-            if type(source) in (tuple, list):
-                (src, dst) = source
-                src = os.path.abspath(os.path.join(basedir, src))
-                (dest_dir, _) = os.path.split(dst)
-                dst = os.path.abspath(os.path.join(basedir, dst))
-                if dest_dir:
-                    dest_dir = os.path.abspath(os.path.join(basedir, dest_dir))
-                    try:
-                        os.makedirs(dest_dir)
-                    except OSError:
-                        pass
-                # wildcards are allowed
-                files = glob.glob(src)
-                if len(files) == 0:
-                    cprint("no glob for " + src, 'blue')
-                for srcf in files:
-                    srcf = os.path.abspath(srcf)
-                    dstf = dst if len(files) == 1 else os.path.join(dest_dir, os.path.basename(srcf))
-                    if not os.path.exists(dstf):
-                        spawn(
-                            "ln -s {} {}".format(srcf, dstf),
-                            show=True,
-                            working_directory=basedir,
-                            raise_on_fail=True
-                        )
-                    else:
-                        cprint("Not (re)linking {} to {}, destination exists".format(srcf, dstf), 'blue')
+            if type(source_spec) in (tuple, list):
+                (src, dst) = source_spec
+                src = (basedir / src).resolve()
+                dst = basedir / dst
+
+                dst.parent.mkdir(parents=True, exist_ok=True)
+
+                if not dst.exists():
+                    dst.symlink_to(src)
+                elif dst.is_symlink():
+                    cprint(f"Not (re)linking {src} to {dst}, destination exists", 'blue')
+                else:
+                    cprint(f"Can't symlink: {dst} exists, but is not a symlink", 'red')
 
         for command in manifest.get('after setup', []):
             spawn(command, show=True, working_directory=basedir, raise_on_fail=True)

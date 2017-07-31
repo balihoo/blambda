@@ -9,7 +9,6 @@ from termcolor import cprint
 
 from .utils.findfunc import find_manifest
 from .utils import env_manager
-from .utils.lambda_manifest import LambdaManifest
 
 
 def read_function_names_from_file(filename):
@@ -34,12 +33,11 @@ def run(args):
         cprint("read {} from {}".format(func_names, args.file), 'blue')
 
     for func_name in func_names:
-        manifest_filename = find_manifest(func_name)
-        if not manifest_filename:
+        manifest = find_manifest(func_name)
+        if not manifest:
             cprint("unable to find " + func_name, 'red')
             exit(1)
         else:
-            manifest = LambdaManifest(manifest_filename)
             if args.echo_env:
                 env = env_manager.EnvManager(manifest.runtime)
                 print(env.runtime.env_name)

@@ -7,6 +7,7 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from termcolor import cprint
 
+from .utils.base import die
 from .utils.findfunc import find_manifest
 from .utils.lambda_manifest import LambdaManifest
 
@@ -14,8 +15,7 @@ from .utils.lambda_manifest import LambdaManifest
 def find_iml_file(path: Path) -> Path:
     # if you hit '/', then give up
     if str(path) == path.anchor:
-        cprint("Couldn't find intellij project .iml file!", 'red')
-        exit(1)
+        die("Couldn't find intellij project .iml file!", 'red')
 
     # look for an .idea directory for older versions of intellij
     idea_dir = (path / '.idea')
@@ -38,12 +38,11 @@ def setup_parser(parser):
 
 
 def run(args):
-    manifest_filename = find_manifest(args.function_name)
-    if manifest_filename is None:
+    manifest = find_manifest(args.function_name)
+    if manifest is None:
         cprint("Couldn't find manifest for " + args.function_name, 'red')
         exit(1)
 
-    manifest = LambdaManifest(manifest_filename)
     lib_dir = Path(manifest.lib_dir)
 
     iml_file = find_iml_file(lib_dir)

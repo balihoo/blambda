@@ -3,6 +3,7 @@ from __future__ import print_function
 import json
 import time
 from contextlib import contextmanager
+from pathlib import PurePath
 from subprocess import *
 
 from termcolor import cprint
@@ -16,8 +17,11 @@ def normalize(bytebuf):
 
 
 def spawn(cmd, show=False, working_directory=None, raise_on_fail=False):
+    if isinstance(working_directory, PurePath):
+        working_directory = str(working_directory.absolute())
     if working_directory == "":
         working_directory = None
+
     p = Popen(cmd, cwd=working_directory, shell=True, stderr=PIPE, stdout=PIPE)
     (stdout, stderr) = (normalize(out) for out in p.communicate())
 
@@ -51,7 +55,7 @@ def humanize_time(secs):
 def timed(tag):
     t = time.time()
     yield
-    cprint("{}: {}".format( tag, time.time() - t), 'red')
+    cprint("{}: {}".format(tag, time.time() - t), 'red')
 
 
 def json_filedump(name, obj):
@@ -70,3 +74,7 @@ def is_string(obj):
         return isinstance(obj, basestring)
     except NameError:
         return isinstance(obj, str)
+
+
+def die(msg, color='red'):
+    raise SystemExit(cprint(msg, color))

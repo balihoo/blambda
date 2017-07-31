@@ -9,7 +9,6 @@ from termcolor import cprint
 
 from .utils import env_manager
 from .utils.findfunc import find_manifest
-from .utils.lambda_manifest import LambdaManifest
 
 
 def fancy_print(header, msg):
@@ -24,8 +23,7 @@ def setup_parser(parser):
 def run(args):
     original_path = list(sys.path)
     for func in args.function_names:
-        manifest_filename = find_manifest(func)
-        manifest = LambdaManifest(manifest_filename)
+        manifest = find_manifest(func)
         env = env_manager.EnvManager(manifest.runtime)
 
         if args.verbose:
@@ -33,11 +31,11 @@ def run(args):
             fancy_print("Lib dir", manifest.lib_dir)
 
         os.chdir(manifest.basedir)
-        os.environ['PYTHONPATH'] = ':'.join([manifest.lib_dir] + original_path)
+        os.environ['PYTHONPATH'] = ':'.join([str(manifest.lib_dir)] + original_path)
         if args.verbose > 1:
             fancy_print("PYTHONPATH", os.environ['PYTHONPATH'])
 
-        test_file = os.path.join(manifest.basedir, f'test_{manifest.function_name}.py')
+        test_file = os.path.join(manifest.basedir, f'test_{manifest.short_name}.py')
 
         fancy_print("Testing", test_file)
         sp.call([env.python, '-m', 'unittest', test_file])

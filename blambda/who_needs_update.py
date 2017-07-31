@@ -1,38 +1,61 @@
 """
 list functions that need updating
 """
-import os
+import json
+import argparse
 
-from .utils.diffs import who_needs_update
+import sys
+
+from termcolor import colored, cprint
+
+from .utils.stale import who_needs_update
+
+
+def _print_colorful_diff_line(line, output_stream):
+    if line.startswith('-'):
+        cprint(line, 'red', file=output_stream)
+    elif line.startswith('+'):
+        cprint(line, 'green', file=output_stream)
+    elif line.startswith('@@'):
+        idx = line.rfind('@@') + 2
+        print(colored(line[:idx], 'cyan') + line[idx:], file=output_stream)
+    else:
+        print(line, file=output_stream)
 
 
 def setup_parser(parser):
-    parser.add_argument('--file', type=str, help='filename to write output to')
-    parser.add_argument('--env', type=str, help='dev or stage or something', default="dev")
-    parser.add_argument('-v', '--verbose', help='verbose output', action='store_true')
-    parser.add_argument('--fromshas', type=str, help="list of functions with shas to check (default: gets from 'env')", default=None)
-    parser.add_argument('--toshas', type=str, help='list of functions with shas to use as base (defaults to HEAD)', default=None)
-    parser.add_argument('--diffs', help='show the diff for each function', action='store_true')
+    formats = ('json', 'human')
+    envs = ('dev', 'stage', 'prod')
+    parser.add_argument('--file', type=argparse.FileType('w'), help='filename to write output to', default=sys.stdout)
+    parser.add_argument('--env', choices=envs, default="dev", help="Which env (default: %(default)s)")
+    parser.add_argument('--format', choices=formats, default='human', help="Output format (default: %(default)s)")
+    parser.add_argument('--show-diffs', '--diffs', help='show the diff for each function', action='store_true')
 
 
 def run(args):
-    this_dir = os.path.dirname(os.path.abspath(__file__))
-    funcs = who_needs_update(
-        this_dir,
+    update = who_needs_update(
         args.env,
-        from_sha_file=args.fromshas,
-        to_sha_file=args.toshas,
-        show_diffs=args.diffs,
+        show_diffs=args.show_diffs,
         verbose=args.verbose
     )
-    if funcs:
-        if args.file:
-            with open(args.file, "w") as f:
-                for func in funcs:
-                    f.write("{}\n".format(func))
-                    print(func)
+    if update:
+        if args.format == 'json':
+            print(json.dumps(update, indent=4), file=args.file)
         else:
-            for func in funcs:
-                print(func)
-    elif args.verbose:
-        print("zero functions need updating")
+            # print human-readable format
+            if args.verbose:
+                print(f"{update['debug']['remote_functions']} remote functions", file=args.file)
+                print(f"{update['debug']['functions_missing_sha']} functions deployed without a sha", file=args.file)
+                print(f"{update['debug']['potential_manifests']} potential manifests", file=args.file)
+                print(f"{update['debug']['actual_manifests']} actual manifests", file=args.file)
+
+            for item in update['functions_needing_update']:
+                if args.verbose:
+                    print(item['function'] + colored('  -- ' + item['reason'], 'blue'), file=args.file)
+                else:
+                    print(item['function'], file=args.file)
+
+                diff = item.get('diff')
+                if diff:
+                    for line in diff:
+                        _print_colorful_diff_line(line, args.file)
