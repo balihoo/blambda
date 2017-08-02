@@ -79,9 +79,8 @@ def copy_dependencies(manifest, tmpdir, options):
             die("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
 
         shutil.copytree(node_modules_dir, tmpdir / "node_modules")
-        (tmpdir / fname).mkdir()
         options.update({
-            "Handler": "{0}/{0}.handler".format(fname),
+            "Handler": f"{fname}.handler",
             "Runtime": "nodejs"
         })
 
@@ -338,7 +337,7 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
 
             zipfile = package(manifest, dryrun)
             manifest_data = manifest.manifest
-            function_name = "_".join([prefix.lower(), manifest.full_name, env.lower()]).replace('/', '_')
+            function_name = f"{prefix.lower()}_{manifest.deployed_name}_{env.lower()}"
 
             # VPC setup
             vpcid = manifest_data.get('options', {}).get('VpcConfig', {}).get('VpcId')
