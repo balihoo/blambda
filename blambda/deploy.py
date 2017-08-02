@@ -78,7 +78,7 @@ def copy_dependencies(manifest, tmpdir, options):
 
     elif 'nodejs' in manifest.runtime:
         NODE_MANIFEST_COUNT += 1
-        if NODE_MANIFEST_COUNT > 0:
+        if NODE_MANIFEST_COUNT > 1:
             raise NotImplementedError("blambda can't currently deploy more than 1 nodejs lambda function at a time, sorry!")
         node_modules_dir = basedir / "node_modules"
 
