@@ -9,7 +9,6 @@ from termcolor import cprint
 
 from .utils.base import die
 from .utils.findfunc import find_manifest
-from .utils.lambda_manifest import LambdaManifest
 
 
 def find_iml_file(path: Path) -> Path:
@@ -43,9 +42,7 @@ def run(args):
         cprint("Couldn't find manifest for " + args.function_name, 'red')
         exit(1)
 
-    lib_dir = Path(manifest.lib_dir)
-
-    iml_file = find_iml_file(lib_dir)
+    iml_file = find_iml_file(manifest.basedir)
 
     with iml_file.open('r') as f:
         data = BeautifulSoup(f, "lxml-xml")
@@ -57,13 +54,17 @@ def run(args):
     parent_dir = iml_file.parent.parent if iml_file.parent.name == '.idea' else iml_file.parent
 
     source_dirs = (
-        lib_dir.parent.relative_to(parent_dir),
-        lib_dir.relative_to(parent_dir))
+        manifest.basedir.relative_to(parent_dir),
+        manifest.lib_dir.relative_to(parent_dir),
+        manifest.node_dir.relative_to(parent_dir),
+    )
 
     for source_dir in source_dirs:
         content.append(
             data.new_tag("sourceFolder", isTestSource="false", url="file://$MODULE_DIR$/" + str(source_dir))
         )
+
+    (manifest.basedir / "node_modules").symlink_to(manifest.node_dir)
 
     if args.dry_run:
         print(data.prettify())

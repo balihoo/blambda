@@ -32,9 +32,6 @@ def split_path(path):
 
 clients = None
 
-# todo: remove this and namespace node_modules directories
-NODE_MANIFEST_COUNT = 0
-
 
 class Clients(object):
     def __init__(self):
@@ -65,8 +62,6 @@ def coffee_compile(coffee_file, target_dir, npm_bin_dir):
 
 def copy_dependencies(manifest, tmpdir, options):
     """ Copy dependencies to the temporary directory for packaging """
-    global NODE_MANIFEST_COUNT
-    basedir = manifest.basedir
     data = manifest.manifest
     fname = manifest.short_name
 
@@ -77,15 +72,10 @@ def copy_dependencies(manifest, tmpdir, options):
         sp.call(f"cp -r {manifest.lib_dir / '*'} {tmpdir}", shell=True)
 
     elif 'nodejs' in manifest.runtime:
-        NODE_MANIFEST_COUNT += 1
-        if NODE_MANIFEST_COUNT > 1:
-            raise NotImplementedError("blambda can't currently deploy more than 1 nodejs lambda function at a time, sorry!")
-        node_modules_dir = basedir / "node_modules"
-
-        if data.get('dependencies') and not node_modules_dir.exists():
+        if data.get('dependencies') and not manifest.node_dir.exists():
             die("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
 
-        shutil.copytree(node_modules_dir, tmpdir / "node_modules")
+        shutil.copytree(manifest.node_dir, tmpdir / "node_modules")
         (tmpdir / fname).mkdir()
         options.update({
             "Handler": f"{fname}/{fname}.handler",
@@ -108,7 +98,7 @@ def exec_deploy_hook(data, tmpdir, basedir, before_or_after):
 def copy_source_files(manifest, tmpdir: Path):
     """Copy the specified source files to the packaging temporary directory"""
     data = manifest.manifest
-    npm_bin_dir = manifest.basedir / 'node_modules' / '.bin'
+    npm_bin_dir = manifest.node_dir / '.bin'
 
     for source_spec in data.get('source files', []):
         if type(source_spec) == list:

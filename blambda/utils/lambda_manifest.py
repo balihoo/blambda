@@ -2,6 +2,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 
 from termcolor import cprint
@@ -92,6 +93,10 @@ class LambdaManifest(object):
         return self.basedir / ('lib_' + self.short_name)
 
     @lazy_property
+    def node_dir(self):
+        return self.basedir / ('node_modules_' + self.short_name)
+
+    @lazy_property
     def deployed_name(self):
         return self.full_name.replace('/', '_')
 
@@ -106,12 +111,11 @@ class LambdaManifest(object):
           clean (bool): whether or not to clean out the dependencies dir
           prod (bool): if true, do not install development dependencies
         """
-        # todo: does this logic belong here?
+        # todo: does this logic belong here? the answer is no.
         manifest = self.manifest
-        basedir = self.basedir
 
         for command in manifest.get('before setup', []):
-            spawn(command, show=True, working_directory=basedir, raise_on_fail=True)
+            spawn(command, show=True, working_directory=self.basedir, raise_on_fail=True)
 
         dependencies = manifest.get('dependencies', {})
         if not prod:
@@ -130,15 +134,24 @@ class LambdaManifest(object):
             env.install_dependencies(self.lib_dir, **deps_to_install)
 
         elif 'node' in self.runtime:
-            moddir = os.path.join(basedir, "node_modules")
-            if os.path.exists(moddir) and clean:
-                shutil.rmtree(moddir)
-            if not os.path.exists(moddir):
-                os.mkdir(moddir)
+            # currently there's no way to npm install to a directory other than <whatever>/node_modules
+            # this installs to a tempdir, where the node_modules of that tempdir is symlinked to the dir we want
+
+            tempdir = tempfile.mkdtemp()
+            node_modules = Path(tempdir) / "node_modules"
+            node_modules.symlink_to(self.node_dir)
+
+            if clean and self.node_dir.exists():
+                shutil.rmtree(self.node_dir)
+
+            self.node_dir.mkdir(exist_ok=True)
 
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
-                spawn("npm install {}@{}".format(dependency, version), show=True, working_directory=basedir)
+                spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
+
+            shutil.rmtree(tempdir)
+
         else:
             raise RuntimeError("Unknown runtime: " + self.runtime)
 
@@ -148,8 +161,8 @@ class LambdaManifest(object):
             # check for files that are to be moved and link them
             if type(source_spec) in (tuple, list):
                 (src, dst) = source_spec
-                src = (basedir / src).resolve()
-                dst = basedir / dst
+                src = (self.basedir / src).resolve()
+                dst = self.basedir / dst
 
                 dst.parent.mkdir(parents=True, exist_ok=True)
 
@@ -161,7 +174,7 @@ class LambdaManifest(object):
                     cprint(f"Can't symlink: {dst} exists, but is not a symlink", 'red')
 
         for command in manifest.get('after setup', []):
-            spawn(command, show=True, working_directory=basedir, raise_on_fail=True)
+            spawn(command, show=True, working_directory=self.basedir, raise_on_fail=True)
 
 
 def merge_dependencies(deps, dev_deps):
