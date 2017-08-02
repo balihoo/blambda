@@ -32,6 +32,9 @@ def split_path(path):
 
 clients = None
 
+# todo: remove this and namespace node_modules directories
+NODE_MANIFEST_COUNT = 0
+
 
 class Clients(object):
     def __init__(self):
@@ -62,6 +65,7 @@ def coffee_compile(coffee_file, target_dir, npm_bin_dir):
 
 def copy_dependencies(manifest, tmpdir, options):
     """ Copy dependencies to the temporary directory for packaging """
+    global NODE_MANIFEST_COUNT
     basedir = manifest.basedir
     data = manifest.manifest
     fname = manifest.short_name
@@ -73,14 +77,18 @@ def copy_dependencies(manifest, tmpdir, options):
         sp.call(f"cp -r {manifest.lib_dir / '*'} {tmpdir}", shell=True)
 
     elif 'nodejs' in manifest.runtime:
+        NODE_MANIFEST_COUNT += 1
+        if NODE_MANIFEST_COUNT > 0:
+            raise NotImplementedError("blambda can't currently deploy more than 1 nodejs lambda function at a time, sorry!")
         node_modules_dir = basedir / "node_modules"
 
         if data.get('dependencies') and not node_modules_dir.exists():
             die("Dependencies defined but no dependency directory found.  Please run 'blambda deps'")
 
         shutil.copytree(node_modules_dir, tmpdir / "node_modules")
+        (tmpdir / fname).mkdir()
         options.update({
-            "Handler": f"{fname}.handler",
+            "Handler": f"{fname}/{fname}.handler",
             "Runtime": "nodejs"
         })
 
@@ -97,7 +105,7 @@ def exec_deploy_hook(data, tmpdir, basedir, before_or_after):
         print('\n'.join(out + err))
 
 
-def copy_source_files(manifest, tmpdir: PurePath):
+def copy_source_files(manifest, tmpdir: Path):
     """Copy the specified source files to the packaging temporary directory"""
     data = manifest.manifest
     npm_bin_dir = manifest.basedir / 'node_modules' / '.bin'
@@ -105,19 +113,21 @@ def copy_source_files(manifest, tmpdir: PurePath):
     for source_spec in data.get('source files', []):
         if type(source_spec) == list:
             # e.g. ["../shared/lambda_chain.py", "lambda_chain.py"]
-            src_filename, dest_filename = source_spec
+            src_filename, dest_path = source_spec
         else:
-            # .e.g. "config.py"
-            src_filename = dest_filename = source_spec
-            dest_filename = Path(dest_filename).name
+            # .e.g. "config.py" or "../shared/util.coffee"
+            src_filename = dest_path = source_spec
 
-        target = tmpdir / dest_filename
+        target = (tmpdir / dest_path).resolve()
         target.parent.mkdir(parents=True, exist_ok=True)
 
         src = manifest.basedir / src_filename
 
         if src.suffix == ".coffee":
-            coffee_compile(coffee_file=src, target_dir=target.parent, npm_bin_dir=npm_bin_dir)
+            # FYI -- this matches the original implementation, if you mix .coffee and .js source files your directory
+            # tree in the deployed package is going to be confusing, but if you don't mix and match it'll be fine.
+            coffee_target = (tmpdir / manifest.short_name / dest_path).parent
+            coffee_compile(coffee_file=src, target_dir=coffee_target, npm_bin_dir=npm_bin_dir)
         else:
             shutil.copyfile(src=src, dst=str(target))
 
