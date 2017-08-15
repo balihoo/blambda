@@ -1,0 +1,12 @@
+{
+  "blambda": "manifest",
+  "dependencies": {},
+  "options": {
+    "Runtime": "python3.6"
+  },
+  "source files": [
+    "validate_testcase.py",
+    "include.py",
+    "not_necessary.py"
+  ]
+}
