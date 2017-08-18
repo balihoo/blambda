@@ -40,13 +40,16 @@ class LambdaManifest(object):
     def __init__(self, manifest_filename):
         super(LambdaManifest, self).__init__()
         self.path = Path(manifest_filename).absolute()
-        self.manifest = self.load_and_validate(manifest_filename)
 
     def __repr__(self):
         return f"<LambdaManifest({self.full_name})>"
 
     def __hash__(self):
         return self.full_name
+
+    @lazy_property
+    def json(self):
+        return self.load_and_validate(self.path)
 
     def load_and_validate(self, manifest_filename):
         if os.path.getsize(manifest_filename) > self.MAX_FILESIZE:
@@ -102,7 +105,7 @@ class LambdaManifest(object):
 
     @lazy_property
     def runtime(self):
-        return self.manifest.get('options', {}).get('Runtime', 'python2.7').lower()
+        return self.json.get('options', {}).get('Runtime', 'python2.7').lower()
 
     def process_manifest(self, clean=False, prod=False):
         """ loads a manifest file, executes pre and post hooks and installs dependencies
@@ -112,7 +115,7 @@ class LambdaManifest(object):
           prod (bool): if true, do not install development dependencies
         """
         # todo: does this logic belong here? the answer is no.
-        manifest = self.manifest
+        manifest = self.json
 
         for command in manifest.get('before setup', []):
             spawn(command, show=True, working_directory=self.basedir, raise_on_fail=True)

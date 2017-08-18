@@ -176,7 +176,7 @@ def _lambda_source_files(manifest):
 
     """
     files = [str(manifest.path)]
-    for source_file in manifest.manifest.get("source files", []):
+    for source_file in manifest.json.get("source files", []):
         if type(source_file) == list:
             source_file = source_file[0]
         source_file = str(manifest.basedir / source_file)

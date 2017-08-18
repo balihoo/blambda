@@ -62,7 +62,7 @@ def coffee_compile(coffee_file, target_dir, npm_bin_dir):
 
 def copy_dependencies(manifest, tmpdir, options):
     """ Copy dependencies to the temporary directory for packaging """
-    data = manifest.manifest
+    data = manifest.json
     fname = manifest.short_name
 
     if 'python' in manifest.runtime:
@@ -97,7 +97,7 @@ def exec_deploy_hook(data, tmpdir, basedir, before_or_after):
 
 def copy_source_files(manifest, tmpdir: Path):
     """Copy the specified source files to the packaging temporary directory"""
-    data = manifest.manifest
+    data = manifest.json
     npm_bin_dir = manifest.node_dir / '.bin'
 
     for source_spec in data.get('source files', []):
@@ -131,7 +131,7 @@ def package(manifest, dryrun=False):
 
     basedir = manifest.basedir
     fname = manifest.short_name
-    data = manifest.manifest
+    data = manifest.json
 
     # default options
     options = {
@@ -336,7 +336,7 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
             print("Deploying function '{}'...".format(fname))
 
             zipfile = package(manifest, dryrun)
-            manifest_data = manifest.manifest
+            manifest_data = manifest.json
             function_name = f"{prefix.lower()}_{manifest.deployed_name}_{env.lower()}"
 
             # VPC setup

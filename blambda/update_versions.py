@@ -88,7 +88,7 @@ def dep_update(name, get_version, deps, overrides, only):
 
 
 def process_manifest(manifest, overrides, only):
-    data = manifest.manifest
+    data = manifest.json
     runtime = manifest.runtime
     if "node" in runtime:
         get_version_func = get_node_version
