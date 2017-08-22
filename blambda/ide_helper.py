@@ -64,7 +64,8 @@ def run(args):
             data.new_tag("sourceFolder", isTestSource="false", url="file://$MODULE_DIR$/" + str(source_dir))
         )
 
-    (manifest.basedir / "node_modules").symlink_to(manifest.node_dir)
+    if "node" in manifest.runtime:
+        (manifest.basedir / "node_modules").symlink_to(manifest.node_dir)
 
     if args.dry_run:
         print(data.prettify())
