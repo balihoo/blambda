@@ -29,7 +29,7 @@ def is_project_root(path: Path):
 
 
 def find_project_root():
-    path = Path('.')
+    path = Path('.').absolute()
     while not is_project_root(path):
         path = path.parent
         if str(path) == path.anchor:
