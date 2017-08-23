@@ -40,7 +40,7 @@ def load():
 
 def setup_parser(parser):
     parser.add_argument('action', choices=['set_local', 'set_global', 'get'])
-    parser.add_argument('variable', choices=['region', 'environment', 'role', 'application', 'account', 'all'])
+    parser.add_argument('variable', choices=['region', 'environment', 'role', 'application', 'account', 'template_fill', 'all'])
     parser.add_argument('value', type=str, help='the value to give to the variable', nargs='?')
 
 

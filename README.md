@@ -106,6 +106,13 @@ before deploying, your dependencies need to be installed. This is a separate ste
 blambda deps new_thing
 ```
 
+If you set the `template_fill` config variable, then blambda will run
+the that command after running `blambda deps`, i.e.
+
+```bash
+blambda config set_global template_fill '~/Code/build-utils/templateFill.pl --data ~/Code/balihoo_config/dev/balihoo.config'
+```
+
 ## deploying your function
 Deploy sets up your lambda function as well as any IAM roles, CloudWatch Events schedules etc.
 ```

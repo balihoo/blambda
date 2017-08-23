@@ -7,8 +7,10 @@ import os
 
 from termcolor import cprint
 
+from .utils.base import spawn
 from .utils.findfunc import find_manifest
 from .utils import env_manager
+from .config import load as load_config
 
 
 def read_function_names_from_file(filename):
@@ -32,6 +34,8 @@ def run(args):
         func_names |= read_function_names_from_file(args.file)
         cprint("read {} from {}".format(func_names, args.file), 'blue')
 
+    config = load_config()
+
     for func_name in func_names:
         manifest = find_manifest(func_name)
         if not manifest:
@@ -45,6 +49,9 @@ def run(args):
             else:
                 cprint("setting up " + func_name, 'blue')
                 manifest.process_manifest(args.clean, args.prod)
+                if 'template_fill' in config:
+                    cprint("running template fill", 'blue')
+                    spawn(config['template_fill'], show=True, working_directory=manifest.basedir)
 
     # copy activation script to pwd
     this_file_dir = os.path.dirname(os.path.abspath(__file__))
