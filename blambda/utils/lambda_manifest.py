@@ -37,9 +37,12 @@ class LambdaManifest(object):
     """
     MAX_FILESIZE = 10000
 
-    def __init__(self, manifest_filename):
+    def __init__(self, manifest_filename, parse_json=False):
         super(LambdaManifest, self).__init__()
         self.path = Path(manifest_filename).absolute()
+        if parse_json:
+            # noinspection PyStatementEffect
+            self.json  # todo: this loads/validates as a side effect, eew
 
     def __repr__(self):
         return f"<LambdaManifest({self.full_name})>"
@@ -107,6 +110,46 @@ class LambdaManifest(object):
     def runtime(self):
         return self.json.get('options', {}).get('Runtime', 'python2.7').lower()
 
+    def source_files(self, dest_dir: Path = None):
+        """ Return a generator yielding tuples of (source_file, destination_target), unraveling any globs along the way
+
+        There are 3 cases for the "source files" section of the manifest:
+
+            straight copy:
+                "handler.coffee",
+
+            2 argument copy:
+                ["../shared/lambda_chain.py", "lambda_chain.py"],
+
+            2 argument glob:
+                ["../../../shared/*.coffee", "./*.coffee"],
+        """
+        if dest_dir is None:
+            dest_dir = self.basedir
+        else:
+            dest_dir = Path(dest_dir)
+
+        for source_spec in self.json.get('source files', []):
+            if type(source_spec) in (tuple, list):
+                (src_pattern, dst_pattern) = source_spec
+
+                if '*' in str(src_pattern):
+                    src_paths = self.basedir.glob(src_pattern)
+                else:
+                    src_paths = [self.basedir / src_pattern]
+
+                for src in src_paths:
+                    src = (self.basedir / src).resolve()
+                    dst = dest_dir / dst_pattern
+
+                    if '*' in dst.name:
+                        dst = dst.parent / src.name
+
+                    yield src, dst
+            else:
+                if dest_dir != self.basedir:
+                    yield (self.basedir / source_spec).resolve(), dest_dir / source_spec
+
     def process_manifest(self, clean=False, prod=False):
         """ loads a manifest file, executes pre and post hooks and installs dependencies
 
@@ -160,21 +203,16 @@ class LambdaManifest(object):
 
         cprint("All dependencies installed", 'blue')
 
-        for source_spec in manifest['source files']:
-            # check for files that are to be moved and link them
-            if type(source_spec) in (tuple, list):
-                (src, dst) = source_spec
-                src = (self.basedir / src).resolve()
-                dst = self.basedir / dst
+        # check for files that are to be moved and link them
+        for src, dst in self.source_files():
+            dst.parent.mkdir(parents=True, exist_ok=True)
 
-                dst.parent.mkdir(parents=True, exist_ok=True)
-
-                if not dst.exists():
-                    dst.symlink_to(src)
-                elif dst.is_symlink():
-                    cprint(f"Not (re)linking {src} to {dst}, destination exists", 'blue')
-                else:
-                    cprint(f"Can't symlink: {dst} exists, but is not a symlink", 'red')
+            if not dst.exists():
+                dst.symlink_to(src)
+            elif dst.is_symlink():
+                cprint(f"Not (re)linking {src} to {dst}, destination exists", 'blue')
+            else:
+                cprint(f"Can't symlink: {dst} exists, but is not a symlink", 'red')
 
         for command in manifest.get('after setup', []):
             spawn(command, show=True, working_directory=self.basedir, raise_on_fail=True)

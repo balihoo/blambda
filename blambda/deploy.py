@@ -97,29 +97,15 @@ def exec_deploy_hook(data, tmpdir, basedir, before_or_after):
 
 def copy_source_files(manifest, tmpdir: Path):
     """Copy the specified source files to the packaging temporary directory"""
-    data = manifest.json
     npm_bin_dir = manifest.node_dir / '.bin'
 
-    for source_spec in data.get('source files', []):
-        if type(source_spec) == list:
-            # e.g. ["../shared/lambda_chain.py", "lambda_chain.py"]
-            src_filename, dest_path = source_spec
-        else:
-            # .e.g. "config.py" or "../shared/util.coffee"
-            src_filename = dest_path = source_spec
-
-        target = (tmpdir / dest_path).resolve()
-        target.parent.mkdir(parents=True, exist_ok=True)
-
-        src = manifest.basedir / src_filename
+    for src, dst in manifest.source_files(dest_dir=tmpdir):
+        dst.parent.mkdir(parents=True, exist_ok=True)
 
         if src.suffix == ".coffee":
-            # FYI -- this matches the original implementation, if you mix .coffee and .js source files your directory
-            # tree in the deployed package is going to be confusing, but if you don't mix and match it'll be fine.
-            coffee_target = (tmpdir / manifest.short_name / dest_path).parent
-            coffee_compile(coffee_file=src, target_dir=coffee_target, npm_bin_dir=npm_bin_dir)
+            coffee_compile(coffee_file=src, target_dir=dst.parent, npm_bin_dir=npm_bin_dir)
         else:
-            shutil.copyfile(src=src, dst=str(target))
+            shutil.copyfile(str(src), str(dst))
 
 
 def package(manifest, dryrun=False):

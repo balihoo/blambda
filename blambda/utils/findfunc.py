@@ -60,7 +60,7 @@ def get_runtime(manifest_path):
 
 def _load_manifest(filename, verbose=True):
     try:
-        return LambdaManifest(filename)
+        return LambdaManifest(filename, parse_json=True)
     except ValueError as e:
         if verbose:
             cprint(e, 'red')

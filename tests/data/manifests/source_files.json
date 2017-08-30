@@ -1,0 +1,18 @@
+{
+  "blambda": "manifest",
+  "dev dependencies": {
+  },
+  "dependencies": {
+  },
+  "options": {
+    "Description": "for testing the source files section",
+    "Runtime": "python3.6"
+  },
+  "source files": [
+    "testfile.coffee",
+    "plaincopy.txt",
+    ["../shared/*.coffee", "./*.coffee"],
+    ["../shared/*.txt", "./*.txt"],
+    ["../shared/shared.txt", "shared.txt"]
+  ]
+}
