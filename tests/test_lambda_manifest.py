@@ -48,7 +48,7 @@ class TestFindFunc(unittest.TestCase):
         outdir = Path('/tmp')
 
         expect = [
-            ((root / 'testfile.coffee'), (outdir / 'testfile.coffee')),
+            ((root / 'testfile.coffee'), (outdir / 'source_files' / 'testfile.coffee')),
             ((root / 'plaincopy.txt'), (outdir / 'plaincopy.txt')),
             ((root / '../shared/a.coffee'), (outdir / 'a.coffee')),
             ((root / '../shared/shared.txt'), (outdir / 'shared.txt')),
@@ -57,4 +57,4 @@ class TestFindFunc(unittest.TestCase):
         for src, dest in manifest.source_files(dest_dir=outdir):
             src_expect, dest_expect = expect.pop(0)
             self.assertEqual(src.resolve(), src_expect.resolve())
-            self.assertEqual(dest.resolve(), dest_expect.resolve())
+            self.assertEqual(dest, dest_expect)

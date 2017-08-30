@@ -123,6 +123,9 @@ class LambdaManifest(object):
 
             2 argument glob:
                 ["../../../shared/*.coffee", "./*.coffee"],
+
+        However, .coffee files are a special case, when deploying, they are prefixed with the lambda function name
+        in the deployment zip
         """
         if dest_dir is None:
             dest_dir = self.basedir
@@ -148,7 +151,11 @@ class LambdaManifest(object):
                     yield src, dst
             else:
                 if dest_dir != self.basedir:
-                    yield (self.basedir / source_spec).resolve(), dest_dir / source_spec
+                    src = (self.basedir / source_spec).resolve()
+                    if src.suffix == '.coffee':
+                        yield src, dest_dir / self.short_name / source_spec
+                    else:
+                        yield src, dest_dir / dest_dir / source_spec
 
     def process_manifest(self, clean=False, prod=False):
         """ loads a manifest file, executes pre and post hooks and installs dependencies
