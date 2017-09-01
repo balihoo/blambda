@@ -155,7 +155,7 @@ class LambdaManifest(object):
                     if src.suffix == '.coffee':
                         yield src, dest_dir / self.short_name / source_spec
                     else:
-                        yield src, dest_dir / dest_dir / source_spec
+                        yield src, dest_dir / source_spec
 
     def process_manifest(self, clean=False, prod=False):
         """ loads a manifest file, executes pre and post hooks and installs dependencies
