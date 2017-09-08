@@ -50,6 +50,10 @@ def run(args):
     func = import_lambda_function_from_file(py_file)
     cprint("Calling " + py_file, 'green')
 
-    retval = func(payload, None)
-    color = 'blue' if retval.get('status') == 'SUCCESS' else 'red'
-    cprint(json.dumps(retval, indent=4), color)
+    try:
+        retval = func(payload, None)
+    except Exception as e:
+        cprint(f"Error executing lambda function!\n{e}")
+    else:
+        color = 'blue' if retval.get('status') == 'SUCCESS' else 'red'
+        cprint(json.dumps(retval, indent=4), color)
