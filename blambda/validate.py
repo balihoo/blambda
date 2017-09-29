@@ -16,7 +16,7 @@ def setup_parser(parser):
 
 def run(args):
     for func_name in args.function_names:
-        manifest = find_manifest(func_name)
+        manifest = find_manifest(func_name, fail_if_missing=True)
 
         if manifest.runtime.startswith('node'):
             cprint(f'skipping {manifest.full_name}, node functions not yet supported', 'yellow')

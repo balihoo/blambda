@@ -2,15 +2,17 @@ import os
 
 from termcolor import cprint
 
-from .base import spawn, json_fileload
+from .base import spawn, json_fileload, die
 from .lambda_manifest import LambdaManifest
 
 
-def find_manifest(function_name):
+def find_manifest(function_name, fail_if_missing=False):
     """Find an individual manifest given a function name"""
     manifests = find_all_manifests(get_search_root())
     matching = [m for m in manifests if function_name in (m.short_name, m.full_name, f'{m.group}/{m.short_name}')]
     if not matching:
+        if fail_if_missing:
+            die(f"Couldn't find {function_name}")
         return None
 
     # prefer the manifest in pwd, if possible
