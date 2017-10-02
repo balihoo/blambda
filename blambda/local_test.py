@@ -23,7 +23,7 @@ def setup_parser(parser):
 def run(args):
     original_path = list(sys.path)
     for func in args.function_names:
-        manifest = find_manifest(func)
+        manifest = find_manifest(func, fail_if_missing=True)
         env = env_manager.EnvManager(manifest.runtime)
 
         if args.verbose:

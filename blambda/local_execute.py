@@ -34,7 +34,7 @@ def run(args):
         with open(payload, 'r') as f:
             payload = json.load(f)
 
-    manifest = find_manifest(args.function_name)
+    manifest = find_manifest(args.function_name, fail_if_missing=True)
     env = env_manager.EnvManager(manifest.runtime)
 
     sys.path.insert(0, str(manifest.lib_dir))
