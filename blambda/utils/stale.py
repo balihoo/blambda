@@ -175,7 +175,7 @@ def _lambda_source_files(manifest):
         List[str]: List of all possible files that could be relevant to git for this lambda function
 
     """
-    files = [str(manifest.path)]
+    files = [str(manifest.path), str(manifest.path) + '.tt2']
     for source_file in manifest.json.get("source files", []):
         if type(source_file) == list:
             source_file = source_file[0]

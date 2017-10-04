@@ -26,6 +26,7 @@ elif [ -n "$BASH_VERSION" ]; then
    BLAMBDA_NEW_LIB_PATH=${BLAMBDA_ENV_AND_LIB[1]}
 fi
 
+# todo: fix this hardcoded env
 BLAMBDA_NEW_LIB_PATH=${HOME}/.pyenv/versions/3.6.1/lib/python3.6/:${BLAMBDA_NEW_LIB_PATH}
 
 if [[ ${BLAMBDA_ENV} != blambda* ]]; then
