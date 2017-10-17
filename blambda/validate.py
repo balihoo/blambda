@@ -107,6 +107,7 @@ class ManifestSourceFileDiff:
 
 def compare_source_files_to_manifest(manifest: LambdaManifest):
     suggested_files = get_required_files(manifest)
-    existing_source = set(manifest.json['source files'])
+    existing_source = set(item[1] if isinstance(item, list) else item
+                          for item in manifest.json['source files'])
 
     return ManifestSourceFileDiff(existing_source, suggested_files)
