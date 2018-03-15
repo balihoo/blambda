@@ -17,6 +17,11 @@ Then add the following to your `~/.bashrc`
 ```bash
 export PATH="$HOME/.pyenv/bin:$PATH"
 eval "$(pyenv init -)"
+
+then run:
+git clone https://github.com/pyenv/pyenv-virtualenv.git $(pyenv root)/plugins/pyenv-virtualenv
+
+then add to your .bashrc:
 eval "$(pyenv virtualenv-init -)"
 ```
 
