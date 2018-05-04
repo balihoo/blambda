@@ -55,5 +55,8 @@ def run(args):
     except Exception as e:
         cprint(f"Error executing lambda function!\n{e}")
     else:
-        color = 'blue' if retval.get('status') == 'SUCCESS' else 'red'
+        try:
+            color = 'blue' if retval.get('status') == 'SUCCESS' else 'red'
+        except Exception as e:
+            color = 'red'
         cprint(json.dumps(retval, indent=4), color)
