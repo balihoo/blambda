@@ -152,7 +152,7 @@ class LambdaManifest(object):
             else:
                 if dest_dir != self.basedir:
                     src = (self.basedir / source_spec).resolve()
-                    if src.suffix == '.coffee':
+                    if src.suffix == '.coffee' or src.suffix == '.js':
                         yield src, dest_dir / self.short_name / source_spec
                     else:
                         yield src, dest_dir / source_spec
