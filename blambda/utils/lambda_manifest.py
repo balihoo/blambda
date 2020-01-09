@@ -175,10 +175,10 @@ class LambdaManifest(object):
             dev_deps = manifest.get('dev dependencies', {})
             dependencies = merge_dependencies(dependencies, dev_deps)
 
-        validate_dependencies(dependencies)
         deps_to_install = {d: v for (d, v) in dependencies.items() if not v == "skip"}
 
         if 'python' in self.runtime:
+            validate_dependencies(dependencies)
             env = env_manager.EnvManager(self.runtime)
             env.create(clean)
             if clean and os.path.exists(self.lib_dir):
