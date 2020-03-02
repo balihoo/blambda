@@ -13,6 +13,8 @@ LambdaRuntime = namedtuple('LambdaRuntime', ('manifest', 'extension', 'source_di
 runtimes = {
     'python27': LambdaRuntime('python2.7', '.py', 'python/src'),
     'python36': LambdaRuntime('python3.6', '.py', 'python/src'),
+    'python37': LambdaRuntime('python3.7', '.py', 'python/src'),
+    'python38': LambdaRuntime('python3.8', '.py', 'python/src'),
     'coffee': LambdaRuntime('nodejs4.3', '.coffee', 'node/src')
 }
 
