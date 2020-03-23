@@ -16,7 +16,7 @@ LambdaRuntime = namedtuple('LambdaRuntime', ('name', 'version', 'env_name'))
 py27 = LambdaRuntime('python2.7', '2.7.13', 'blambda-2.7')
 py36 = LambdaRuntime('python3.6', '3.6.1', 'blambda-3.6')
 py37 = LambdaRuntime('python3.7', '3.7.5', 'blambda-3.7')
-py38 = LambdaRuntime('python3.8', '3.8.0', 'blambda-3.8')
+py38 = LambdaRuntime('python3.8', '3.8.1', 'blambda-3.8')
 
 runtimes = {
     py27.name: py27,

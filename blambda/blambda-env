@@ -31,7 +31,7 @@ if [[ ${BLAMBDA_ENV} == 'blambda-3.6' ]]; then
 elif [[ ${BLAMBDA_ENV} == 'blambda-3.7' ]]; then
    PYENV_PATH = '.pyenv/versions/3.7.5/lib/python3.7/'
 elif [[ ${BLAMBDA_ENV} == 'blambda-3.8' ]]; then
-   PYENV_PATH = '.pyenv/versions/3.8.0/lib/python3.8/'
+   PYENV_PATH = '.pyenv/versions/3.8.1/lib/python3.8/'
 else
 	echo "blambda couldn't read the python environment from manifest, aborting!"
 	return 1
