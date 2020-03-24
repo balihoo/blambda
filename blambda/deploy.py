@@ -323,7 +323,12 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
 
             zipfile = package(manifest, dryrun)
             manifest_data = manifest.json
-            function_name = f"{prefix.lower()}_{manifest.deployed_name}_{env.lower()}"
+            manifest_func_name = manifest_data.get('options', {}).get('name', '')
+            if manifest_func_name != '':
+                function_name = f"{manifest_func_name.lower()}_{env.lower()}"
+            else:
+                function_name = f"{prefix.lower()}_{manifest.deployed_name}_{env.lower()}"
+            cprint(f'Lambda name: {function_name}', 'yellow')
 
             # VPC setup
             vpcid = manifest_data.get('options', {}).get('VpcConfig', {}).get('VpcId')
