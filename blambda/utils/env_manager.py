@@ -15,12 +15,22 @@ from termcolor import cprint
 LambdaRuntime = namedtuple('LambdaRuntime', ('name', 'version', 'env_name'))
 py27 = LambdaRuntime('python2.7', '2.7.13', 'blambda-2.7')
 py36 = LambdaRuntime('python3.6', '3.6.1', 'blambda-3.6')
+py37 = LambdaRuntime('python3.7', '3.7.5', 'blambda-3.7')
+py38 = LambdaRuntime('python3.8', '3.8.1', 'blambda-3.8')
 
+runtimes = {
+    py27.name: py27,
+    py36.name: py36,
+    py37.name: py37,
+    py38.name: py38
+}
+
+DEFAULT_RUNTIME = py36
 
 class EnvManager(object):
     def __init__(self, runtime):
         super(EnvManager, self).__init__()
-        self.runtime = py36 if runtime.lower() == py36.name else py27
+        self.runtime = runtimes.get(runtime.lower(), DEFAULT_RUNTIME)
 
     @property
     def pyenv(self):
