@@ -47,7 +47,7 @@ def run(args):
                 print(env.runtime.env_name)
                 print(manifest.lib_dir)
             else:
-                cprint("setting up " + func_name, 'blue')
+                cprint(f"setting up {manifest.full_name}", 'blue')
                 manifest.process_manifest(args.clean, args.prod)
                 if 'template_fill' in config:
                     cprint("running template fill", 'blue')
