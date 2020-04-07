@@ -267,7 +267,7 @@ def publish(name, role, zipfile, options, dryrun):
          str: the arn of the new or updated function
     """
     client = clients.lambda_client
-
+    options.pop('name', None)
     sha = git_sha()
     mods = "!" * git_local_mods()
     description = options.get("Description", "")
