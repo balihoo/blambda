@@ -8,7 +8,10 @@ from .lambda_manifest import LambdaManifest
 
 def find_manifest(function_name, fail_if_missing=False):
     """Find an individual manifest given a function name"""
-    manifests = find_all_manifests(get_search_root())
+    search_root = get_search_root()
+    cprint(f'Search root: {search_root}', 'yellow') 
+    manifests = find_all_manifests(search_root)
+    print(manifests)
     matching = [m for m in manifests if function_name in (m.short_name, m.full_name, f'{m.group}/{m.short_name}')]
     if not matching:
         if fail_if_missing:
@@ -27,7 +30,10 @@ def find_manifest(function_name, fail_if_missing=False):
 
 def find_manifests(function_names):
     """Find a set of manifests given a set of function name"""
-    manifests = find_all_manifests(get_search_root())
+    search_root = get_search_root()
+    cprint(f'Search root: {search_root}', 'yellow') 
+    manifests = find_all_manifests(search_root)
+    print(manifests)
 
     # get manifests where either short_name or full_name is in the function_names list
     return [m for m in manifests
