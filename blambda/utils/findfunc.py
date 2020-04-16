@@ -40,9 +40,10 @@ def find_manifests(function_names):
             if any(name in function_names for name in (m.short_name, m.full_name, f'{m.group}/{m.short_name}'))]
 
 
-def find_all_manifests(root, verbose=False):
+def find_all_manifests(root, verbose=True):
     """Find all manifests in a given directory/root"""
     json_files = _all_json_files(root)
+    print(json_files)
     manifests = (_load_manifest(json_file, verbose) for json_file in json_files)
     return [m for m in manifests if m]
 
