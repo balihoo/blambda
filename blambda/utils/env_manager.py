@@ -79,6 +79,9 @@ class EnvManager(object):
 
         args = ['pyenv', 'virtualenv', '--clear', self.runtime.version, self.runtime.env_name]
         sp.check_call(args)
+        tools_upgrade = [self.pip, 'install', '--upgrade']
+        sp.check_call(tools_upgrade + ['setuptools'])
+        sp.check_call(tools_upgrade + ['pip'])
 
     def install_dependencies(self, lib_dir, **dependencies):
         """ Install dependencies with pip
