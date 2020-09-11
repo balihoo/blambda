@@ -143,12 +143,12 @@ class LambdaManifest(object):
 
                 for src in src_paths:
                     src = (self.basedir / src).resolve()
-                    dst = dest_dir / dst_pattern
+                    dst = dest_dir / self.short_name / dst_pattern
 
                     if '*' in dst.name:
-                        dst = dst.parent / src.name
+                        dst = dst.parent / self.short_name / src.name
 
-                    yield src, dst
+                    yield src, dest_dir / self.short_name / dst_pattern
             else:
                 if dest_dir != self.basedir:
                     src = (self.basedir / source_spec).resolve()
