@@ -146,7 +146,7 @@ class LambdaManifest(object):
                     dst = dest_dir / dst_pattern
 
                     if '*' in dst.name:
-                        dst = dst.parent / src.name
+                        dst = dst.parent / self.short_name / src.name
 
                     yield src, dst
             else:
