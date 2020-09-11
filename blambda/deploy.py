@@ -103,7 +103,7 @@ def copy_source_files(manifest, tmpdir: Path):
         dst.parent.mkdir(parents=True, exist_ok=True)
 
         if src.suffix == ".coffee":
-            coffee_compile(coffee_file=src, target_dir=dst, npm_bin_dir=npm_bin_dir)
+            coffee_compile(coffee_file=src, target_dir=dst.parent, npm_bin_dir=npm_bin_dir)
         else:
             shutil.copyfile(str(src), str(dst))
 
