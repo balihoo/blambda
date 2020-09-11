@@ -148,12 +148,12 @@ class LambdaManifest(object):
                     if '*' in dst.name:
                         dst = dst.parent / self.short_name / src.name
 
-                    yield src, dest_dir / self.short_name / dst_pattern
+                    yield src, dst
             else:
                 if dest_dir != self.basedir:
                     src = (self.basedir / source_spec).resolve()
                     if src.suffix == '.coffee' or src.suffix == '.js':
-                        yield src, dest_dir / self.short_name / source_spec
+                        yield src, dest_dir / source_spec
                     else:
                         yield src, dest_dir / source_spec
 
