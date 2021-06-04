@@ -170,6 +170,7 @@ class LambdaManifest(object):
         for command in manifest.get('before setup', []):
             spawn(command, show=True, working_directory=self.basedir, raise_on_fail=True)
 
+        dep_upgrade = manifest.get('dependencies upgrade', False)
         dependencies = manifest.get('dependencies', {})
         if not prod:
             dev_deps = manifest.get('dev dependencies', {})
@@ -184,7 +185,7 @@ class LambdaManifest(object):
             if clean and os.path.exists(self.lib_dir):
                 cprint(f"clean install -- removing {self.lib_dir}", 'yellow')
                 shutil.rmtree(self.lib_dir)
-            env.install_dependencies(self.lib_dir, **deps_to_install)
+            env.install_dependencies(self.lib_dir, dep_upgrade, **deps_to_install)
 
         elif 'node' in self.runtime:
             # currently there's no way to npm install to a directory other than <whatever>/node_modules

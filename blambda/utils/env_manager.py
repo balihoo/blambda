@@ -27,6 +27,7 @@ runtimes = {
 
 DEFAULT_RUNTIME = py36
 
+
 class EnvManager(object):
     def __init__(self, runtime):
         super(EnvManager, self).__init__()
@@ -83,16 +84,17 @@ class EnvManager(object):
         sp.check_call(tools_upgrade + ['setuptools'])
         sp.check_call(tools_upgrade + ['pip'])
 
-    def install_dependencies(self, lib_dir, **dependencies):
+    def install_dependencies(self, lib_dir, dep_upgrade, **dependencies):
         """ Install dependencies with pip
 
         Args:
             lib_dir: directory where the dependencies should be stored (this is separate from the virtualenv dir)
+            dep_upgrade: --upgrade require or not
             **dependencies: dict of { 'dependency_name': 'dependency_version' }
 
         """
         with concurrent.futures.ThreadPoolExecutor(max_workers=32) as parallel:
-            all_futures = {parallel.submit(self._install_dependency, dep, lib_dir, version): dep
+            all_futures = {parallel.submit(self._install_dependency, dep, lib_dir, version, dep_upgrade): dep
                            for dep, version in dependencies.items()}  # key is the futures object, value is the dep
 
             for future in concurrent.futures.as_completed(all_futures):
@@ -105,7 +107,7 @@ class EnvManager(object):
                 else:
                     cprint('pip: finished installing ' + dep, 'blue')
 
-    def _install_dependency(self, dep, lib_dir, version):
+    def _install_dependency(self, dep, lib_dir, version, dep_upgrade):
         install_cmd = ['install']
         local = dep.startswith('/home/')
         linked = version == "link"
@@ -122,6 +124,9 @@ class EnvManager(object):
             # there's an outstanding bug which prevents pip from using both -e and -t at the same time
             install_cmd.extend(('-e', dep))
         else:
+            if dep_upgrade:
+                install_cmd.append("--upgrade")
+
             if version:
                 if dep.startswith("git+"):
                     dep += "@" + version
