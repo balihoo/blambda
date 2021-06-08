@@ -124,13 +124,13 @@ class EnvManager(object):
             # there's an outstanding bug which prevents pip from using both -e and -t at the same time
             install_cmd.extend(('-e', dep))
         else:
-            if dep_upgrade:
-                install_cmd.append("--upgrade")
 
             if version:
                 if dep.startswith("git+"):
                     dep += "@" + version
                 else:
+                    if dep_upgrade:
+                        install_cmd.append("--upgrade")
                     dep += "==" + version
             install_cmd.extend([dep, '-t', lib_dir])
 
