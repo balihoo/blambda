@@ -107,9 +107,9 @@ class EnvManager(object):
                 else:
                     cprint('pip: finished installing ' + dep, 'blue')
                     if dep in segregated_targets.keys():
-                        cprint('Running rsync: to transfer data from ' + segregated_targets[dep] + ' to ', lib_dir, 'blue')
-                        sp.check_call(f"rsync -r -P {segregated_targets[dep]} {lib_dir}")
-                        sp.check_call(f"rm -rf {segregated_targets[dep]}")
+                        cprint('Running rsync: to transfer data from ' + str(segregated_targets[dep]) + ' to ' + str(lib_dir), 'blue')
+                        sp.check_call(["rsync", "-rv", "-P", f"{segregated_targets[dep]}/", f"{lib_dir}/"])
+                        sp.check_call(["rm", "-rf", f"{segregated_targets[dep]}"])
 
     def _install_dependency(self, dep, lib_dir, version, segregated_targets):
         install_cmd = ['install']
