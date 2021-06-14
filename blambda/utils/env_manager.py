@@ -84,17 +84,17 @@ class EnvManager(object):
         sp.check_call(tools_upgrade + ['setuptools'])
         sp.check_call(tools_upgrade + ['pip'])
 
-    def install_dependencies(self, lib_dir, dep_upgrade, **dependencies):
+    def install_dependencies(self, lib_dir, segregated_targets, **dependencies):
         """ Install dependencies with pip
 
         Args:
             lib_dir: directory where the dependencies should be stored (this is separate from the virtualenv dir)
-            dep_upgrade: --upgrade require or not
+            segregated_targets: --upgrade require or not
             **dependencies: dict of { 'dependency_name': 'dependency_version' }
 
         """
         with concurrent.futures.ThreadPoolExecutor(max_workers=32) as parallel:
-            all_futures = {parallel.submit(self._install_dependency, dep, lib_dir, version, dep_upgrade): dep
+            all_futures = {parallel.submit(self._install_dependency, dep, lib_dir, version, segregated_targets): dep
                            for dep, version in dependencies.items()}  # key is the futures object, value is the dep
 
             for future in concurrent.futures.as_completed(all_futures):
@@ -106,8 +106,12 @@ class EnvManager(object):
                     sys.exit(1)
                 else:
                     cprint('pip: finished installing ' + dep, 'blue')
+                    if dep in segregated_targets.keys():
+                        cprint('Running rsync: to transfer data from ' + str(segregated_targets[dep]) + ' to ' + str(lib_dir), 'blue')
+                        sp.check_call(["rsync", "-rv", "-P", f"{segregated_targets[dep]}/", f"{lib_dir}/"])
+                        sp.check_call(["rm", "-rf", f"{segregated_targets[dep]}"])
 
-    def _install_dependency(self, dep, lib_dir, version, dep_upgrade):
+    def _install_dependency(self, dep, lib_dir, version, segregated_targets):
         install_cmd = ['install']
         local = dep.startswith('/home/')
         linked = version == "link"
@@ -129,8 +133,8 @@ class EnvManager(object):
                 if dep.startswith("git+"):
                     dep += "@" + version
                 else:
-                    if dep_upgrade:
-                        install_cmd.append("--upgrade")
+                    if dep in segregated_targets.keys():
+                        lib_dir = segregated_targets[dep]
                     dep += "==" + version
             install_cmd.extend([dep, '-t', lib_dir])
 
