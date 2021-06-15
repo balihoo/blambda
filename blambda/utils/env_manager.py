@@ -89,7 +89,7 @@ class EnvManager(object):
 
         Args:
             lib_dir: directory where the dependencies should be stored (this is separate from the virtualenv dir)
-            segregated_targets: --upgrade require or not
+            segregated_targets: separate target lib for dependencies with conflicting namespaces
             **dependencies: dict of { 'dependency_name': 'dependency_version' }
 
         """
@@ -106,6 +106,7 @@ class EnvManager(object):
                     sys.exit(1)
                 else:
                     cprint('pip: finished installing ' + dep, 'blue')
+                    # Below code will execute only for libs with conflicting namespaces
                     if dep in segregated_targets.keys():
                         cprint('Running rsync: to transfer data from ' + str(segregated_targets[dep]) + ' to ' + str(lib_dir), 'blue')
                         sp.check_call(["rsync", "-rv", "-P", f"{segregated_targets[dep]}/", f"{lib_dir}/"])
