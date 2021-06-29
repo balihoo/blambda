@@ -110,6 +110,9 @@ class LambdaManifest(object):
     def runtime(self):
         return self.json.get('options', {}).get('Runtime', 'python2.7').lower()
 
+    def segregated_lib_dir(self, path):
+        return self.basedir / ('lib_' + path)
+
     def source_files(self, dest_dir: Path = None):
         """ Return a generator yielding tuples of (source_file, destination_target), unraveling any globs along the way
 
@@ -170,6 +173,7 @@ class LambdaManifest(object):
         for command in manifest.get('before setup', []):
             spawn(command, show=True, working_directory=self.basedir, raise_on_fail=True)
 
+        segregated_targets = manifest.get('segregated_targets', [])
         dependencies = manifest.get('dependencies', {})
         if not prod:
             dev_deps = manifest.get('dev dependencies', {})
@@ -184,7 +188,8 @@ class LambdaManifest(object):
             if clean and os.path.exists(self.lib_dir):
                 cprint(f"clean install -- removing {self.lib_dir}", 'yellow')
                 shutil.rmtree(self.lib_dir)
-            env.install_dependencies(self.lib_dir, **deps_to_install)
+            segregated_targets = {k: self.segregated_lib_dir(k) for k in segregated_targets}
+            env.install_dependencies(self.lib_dir, segregated_targets, **deps_to_install)
 
         elif 'node' in self.runtime:
             # currently there's no way to npm install to a directory other than <whatever>/node_modules
