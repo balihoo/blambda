@@ -283,7 +283,8 @@ def publish(name, role, zipfile, options, dryrun):
             cprint("Updating lambda function code", 'yellow')
             response = client.update_function_code(
                 FunctionName=name,
-                ZipFile=file_bytes
+                ZipFile=file_bytes,
+                WaitInterval='15'
             )
             cprint("Updating lambda function configuration", 'yellow')
             response = client.update_function_configuration(
