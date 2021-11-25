@@ -8,6 +8,7 @@ import subprocess as sp
 import sys
 import tempfile
 from pathlib import Path, PurePath
+import time
 
 import boto3
 from botocore.exceptions import ClientError
@@ -283,9 +284,11 @@ def publish(name, role, zipfile, options, dryrun):
             cprint("Updating lambda function code", 'yellow')
             response = client.update_function_code(
                 FunctionName=name,
-                ZipFile=file_bytes,
-                WaitInterval='15'
+                ZipFile=file_bytes
             )
+            
+            time.sleep(5)
+
             cprint("Updating lambda function configuration", 'yellow')
             response = client.update_function_configuration(
                 FunctionName=name,
