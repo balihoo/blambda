@@ -113,7 +113,7 @@ class EnvManager(object):
                         sp.check_call(["rm", "-rf", f"{segregated_targets[dep]}"])
 
     def _install_dependency(self, dep, lib_dir, version, segregated_targets):
-        install_cmd = ['install']
+        install_cmd = ['install --upgrade']
         local = dep.startswith('/home/')
         linked = version == "link"
         is_balihoo_repo = 'github.com/balihoo' in dep
