@@ -281,6 +281,16 @@ def publish(name, role, zipfile, options, dryrun):
         print("Function Package: {} bytes".format(len(file_bytes)))
     if not dryrun:
         try:
+            # TODO: Remove this once all py 3.8 lambdas are deployed on prod
+            # Added below code to update lambda runtime first and then deploy it
+            cprint("Updating lambda function configuration - todo: remove", 'yellow')
+            response = client.update_function_configuration(
+                FunctionName=name,
+                **options
+            )
+
+            time.sleep(5)
+
             cprint("Updating lambda function code", 'yellow')
             response = client.update_function_code(
                 FunctionName=name,

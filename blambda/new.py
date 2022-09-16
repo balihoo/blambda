@@ -15,6 +15,7 @@ runtimes = {
     'python36': LambdaRuntime('python3.6', '.py', 'python/src'),
     'python37': LambdaRuntime('python3.7', '.py', 'python/src'),
     'python38': LambdaRuntime('python3.8', '.py', 'python/src'),
+    'python39': LambdaRuntime('python3.9', '.py', 'python/src'),
     'coffee': LambdaRuntime('nodejs4.3', '.coffee', 'node/src')
 }
 
