@@ -204,6 +204,8 @@ class LambdaManifest(object):
 
             self.node_dir.mkdir(exist_ok=True)
 
+            cprint(f"current_node_dir {self.node_dir}", 'blue')
+
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
                 spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
