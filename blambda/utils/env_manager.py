@@ -80,6 +80,8 @@ class EnvManager(object):
 
         cprint("Creating {} virtualenv...".format(self.runtime.env_name), "yellow")
 
+        cprint(f"current_runtime env {self.runtime.env_name} current_runtime version {self.runtime.version}", "yellow")
+
         args = ['pyenv', 'virtualenv', '--clear', self.runtime.version, self.runtime.env_name]
         sp.check_call(args)
         tools_upgrade = [self.pip, 'install', '--upgrade']
