@@ -208,9 +208,11 @@ class LambdaManifest(object):
 
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
+                cprint(f"node_deps",'blue')
+                cprint(f"npm install {dependency}@{version}",'blue')
                 spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
 
-            shutil.rmtree(tempdir)
+            # shutil.rmtree(tempdir)
 
         else:
             raise RuntimeError("Unknown runtime: " + self.runtime)
