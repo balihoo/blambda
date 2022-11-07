@@ -22,11 +22,17 @@ def spawn(cmd, show=False, working_directory=None, raise_on_fail=False):
     if working_directory == "":
         working_directory = None
 
+    cprint(f"working_directory -> {working_directory}", 'blue')
+
     p = Popen(cmd, cwd=working_directory, shell=True, stderr=PIPE, stdout=PIPE)
     (stdout, stderr) = (normalize(out) for out in p.communicate())
 
     if show:
         if p.returncode == 0:
+            import os
+            files = os.listdir(working_directory)
+            cprint("List of files")
+            cprint(files)
             cprint("   {} -> [OK]".format(cmd), 'blue')
         else:
             cprint("   {} -> [FAIL]\n{}".format(cmd, "\n".join(stderr + stdout)), 'red')

@@ -205,11 +205,11 @@ class LambdaManifest(object):
             self.node_dir.mkdir(exist_ok=True)
 
             cprint(f"current_node_dir {self.node_dir}", 'blue')
+            cprint(f"tempdir {tempdir}",'blue')
 
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
-                cprint(f"node_deps",'blue')
-                cprint(f"npm install {dependency}@{version}",'blue')
+                cprint(f"npm install {dependency}@{version} tempdir",'blue')
                 spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
 
             # shutil.rmtree(tempdir)
@@ -221,6 +221,7 @@ class LambdaManifest(object):
 
         # check for files that are to be moved and link them
         for src, dst in self.source_files():
+            cprint(f"in loop src {src} dst {dst}")
             dst.parent.mkdir(parents=True, exist_ok=True)
 
             if not dst.exists():
