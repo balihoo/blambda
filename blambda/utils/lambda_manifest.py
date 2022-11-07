@@ -198,13 +198,14 @@ class LambdaManifest(object):
             tempdir = tempfile.mkdtemp()
             node_modules = Path(tempdir) / "node_modules"
             node_modules.symlink_to(self.node_dir)
+            print("symlinked" , node_modules.resolve())
 
             if clean and self.node_dir.exists():
                 shutil.rmtree(self.node_dir)
 
             self.node_dir.mkdir(exist_ok=True)
 
-            cprint(f"current_node_dir {self.node_dir}", 'blue')
+            cprint(f"current_node_dir {self.node_dir} --- node_modules {node_modules}", 'blue')
             cprint(f"tempdir {tempdir}",'blue')
 
             # install node dependencies 1 at a time to avoid race condition issues

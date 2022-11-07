@@ -22,7 +22,7 @@ def spawn(cmd, show=False, working_directory=None, raise_on_fail=False):
     if working_directory == "":
         working_directory = None
 
-    cprint(f"working_directory -> {working_directory}", 'blue')
+    cprint(f"working_directory -> {working_directory} cmd -> {cmd}", 'blue')
 
     p = Popen(cmd, cwd=working_directory, shell=True, stderr=PIPE, stdout=PIPE)
     (stdout, stderr) = (normalize(out) for out in p.communicate())
