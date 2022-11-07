@@ -32,7 +32,7 @@ def spawn(cmd, show=False, working_directory=None, raise_on_fail=False):
             import os
             files = os.listdir(working_directory)
             cprint("List of files")
-            cprint(files)
+            print(files)
             cprint("   {} -> [OK]".format(cmd), 'blue')
         else:
             cprint("   {} -> [FAIL]\n{}".format(cmd, "\n".join(stderr + stdout)), 'red')
