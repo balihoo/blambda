@@ -199,8 +199,8 @@ class LambdaManifest(object):
             node_modules = Path(tempdir) / "node_modules"
 
             self.node_dir.mkdir(exist_ok=True)
-            
-            import os
+
+            # import os
             cprint("List of node dir")
             print(os.listdir(self.node_dir))            
 
@@ -211,6 +211,11 @@ class LambdaManifest(object):
                 shutil.rmtree(self.node_dir)
 
             self.node_dir.mkdir(exist_ok=True)
+
+
+            os.system("ln -s " + node_modules + " " +  self.node_dir)
+            os.system("ls -al " + node_modules)
+            os.system("ls -al " +  self.node_dir)
 
             cprint(f"current_node_dir {self.node_dir} --- node_modules {node_modules}", 'blue')
             cprint(f"tempdir {tempdir}",'blue')
