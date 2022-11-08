@@ -197,6 +197,13 @@ class LambdaManifest(object):
 
             tempdir = tempfile.mkdtemp()
             node_modules = Path(tempdir) / "node_modules"
+
+            self.node_dir.mkdir(exist_ok=True)
+            
+            import os
+            cprint("List of node dir")
+            print(os.listdir(self.node_dir))            
+
             node_modules.symlink_to(self.node_dir)
             print("symlinked" , node_modules.resolve())
 
@@ -212,6 +219,10 @@ class LambdaManifest(object):
             for dependency, version in deps_to_install.items():
                 cprint(f"npm install {dependency}@{version}",'blue')
                 spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
+
+                cprint("List of node_dir")
+                print(os.listdir(self.node_dir))
+                
 
             # shutil.rmtree(tempdir)
 
