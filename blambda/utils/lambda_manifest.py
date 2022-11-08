@@ -213,9 +213,9 @@ class LambdaManifest(object):
             self.node_dir.mkdir(exist_ok=True)
 
 
-            os.system("ln -s " + node_modules + " " +  self.node_dir)
-            os.system("ls -al " + node_modules)
-            os.system("ls -al " +  self.node_dir)
+            os.system(f"ln -s {node_modules} {self.node_dir}")
+            os.system(f"ls -al {node_modules}")
+            os.system(f"ls -al {self.node_dir}")
 
             cprint(f"current_node_dir {self.node_dir} --- node_modules {node_modules}", 'blue')
             cprint(f"tempdir {tempdir}",'blue')
