@@ -209,12 +209,12 @@ class LambdaManifest(object):
             if clean and self.node_dir.exists():
                 shutil.rmtree(self.node_dir)
 
-            os.system(f"ls -al {node_modules}")
-            os.system(f"ls -al {self.node_dir}")
+            # os.system(f"ls -al {node_modules}")
+            # os.system(f"ls -al {self.node_dir}")
 
-            cprint(f"current_node_dir {self.node_dir}", 'blue')
-            cprint(f"node_modules {node_modules}", 'blue')
-            cprint(f"tempdir {tempdir}",'blue')
+            # cprint(f"current_node_dir {self.node_dir}", 'blue')
+            # cprint(f"node_modules {node_modules}", 'blue')
+            # cprint(f"tempdir {tempdir}",'blue')
 
             # self.node_dir.mkdir(exist_ok=True)
 
@@ -227,7 +227,7 @@ class LambdaManifest(object):
                 print(os.listdir(self.node_dir))
                 
 
-            # shutil.rmtree(tempdir)
+            shutil.rmtree(tempdir)
 
         else:
             raise RuntimeError("Unknown runtime: " + self.runtime)
