@@ -216,7 +216,7 @@ class LambdaManifest(object):
             cprint(f"node_modules {node_modules}", 'blue')
             cprint(f"tempdir {tempdir}",'blue')
 
-            self.node_dir.mkdir(exist_ok=True)
+            # self.node_dir.mkdir(exist_ok=True)
 
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
