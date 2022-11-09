@@ -199,8 +199,8 @@ class LambdaManifest(object):
             node_modules = Path(tempdir) / "node_modules"
 
             # import os
-            cprint("List of node dir")
-            print(os.listdir(self.node_dir))            
+            # cprint("List of node dir")
+            # print(os.listdir(self.node_dir))            
 
             # node_modules.symlink_to(self.node_dir)
             # print("symlinked" , node_modules.resolve())
