@@ -216,6 +216,8 @@ class LambdaManifest(object):
             # cprint(f"node_modules {node_modules}", 'blue')
             # cprint(f"tempdir {tempdir}",'blue')
 
+            # Commenting below line as of now, because it throws error if dir is already exists
+            # Which should not be the case.
             # self.node_dir.mkdir(exist_ok=True)
 
             # install node dependencies 1 at a time to avoid race condition issues
@@ -226,8 +228,9 @@ class LambdaManifest(object):
                 cprint("List of node_dir")
                 print(os.listdir(self.node_dir))
                 
-
-            shutil.rmtree(tempdir)
+            # Commenting below line because symlink is created to temp directory and
+            # While deploying lambda it is trying to copy content from symlinked dir.
+            # shutil.rmtree(tempdir)
 
         else:
             raise RuntimeError("Unknown runtime: " + self.runtime)
