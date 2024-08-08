@@ -287,7 +287,7 @@ def publish(name, role, zipfile, options, dryrun):
                 ZipFile=file_bytes
             )
             
-            time.sleep(5)
+            time.sleep(15)
 
             cprint("Updating lambda function configuration", 'yellow')
             response = client.update_function_configuration(
