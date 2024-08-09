@@ -146,7 +146,7 @@ class LambdaManifest(object):
 
                 for src in src_paths:
                     src = (self.basedir / src).resolve()
-                    dst = dest_dir / dst_pattern
+                    dst = dest_dir / self.short_name / dst_pattern
 
                     if '*' in dst.name:
                         dst = dst.parent / src.name
@@ -197,18 +197,21 @@ class LambdaManifest(object):
 
             tempdir = tempfile.mkdtemp()
             node_modules = Path(tempdir) / "node_modules"
-            node_modules.symlink_to(self.node_dir)
+            # node_modules.symlink_to(self.node_dir)
+            os.system(f"ln -s {node_modules} {self.node_dir}")
 
             if clean and self.node_dir.exists():
                 shutil.rmtree(self.node_dir)
 
-            self.node_dir.mkdir(exist_ok=True)
+            # self.node_dir.mkdir(exist_ok=True)
 
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
                 spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
 
-            shutil.rmtree(tempdir)
+            # Commenting below line because symlink is created to temp directory and
+            # While deploying lambda it is trying to copy content from symlinked dir.
+            # shutil.rmtree(tempdir)
 
         else:
             raise RuntimeError("Unknown runtime: " + self.runtime)
