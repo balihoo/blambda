@@ -17,12 +17,14 @@ py27 = LambdaRuntime('python2.7', '2.7.13', 'blambda-2.7')
 py36 = LambdaRuntime('python3.6', '3.6.1', 'blambda-3.6')
 py37 = LambdaRuntime('python3.7', '3.7.5', 'blambda-3.7')
 py38 = LambdaRuntime('python3.8', '3.8.1', 'blambda-3.8')
+py39 = LambdaRuntime('python3.9', '3.9.13', 'blambda-3.9')
 
 runtimes = {
     py27.name: py27,
     py36.name: py36,
     py37.name: py37,
-    py38.name: py38
+    py38.name: py38,
+    py39.name: py39
 }
 
 DEFAULT_RUNTIME = py36
@@ -77,6 +79,8 @@ class EnvManager(object):
             sp.check_call("pyenv uninstall -f " + self.runtime.env_name, shell=True)
 
         cprint("Creating {} virtualenv...".format(self.runtime.env_name), "yellow")
+
+        cprint(f"current_runtime env {self.runtime.env_name} current_runtime version {self.runtime.version}", "yellow")
 
         args = ['pyenv', 'virtualenv', '--clear', self.runtime.version, self.runtime.env_name]
         sp.check_call(args)

@@ -197,18 +197,40 @@ class LambdaManifest(object):
 
             tempdir = tempfile.mkdtemp()
             node_modules = Path(tempdir) / "node_modules"
-            node_modules.symlink_to(self.node_dir)
+
+            # import os
+            # cprint("List of node dir")
+            # print(os.listdir(self.node_dir))            
+
+            # node_modules.symlink_to(self.node_dir)
+            # print("symlinked" , node_modules.resolve())
+            os.system(f"ln -s {node_modules} {self.node_dir}")
 
             if clean and self.node_dir.exists():
                 shutil.rmtree(self.node_dir)
 
-            self.node_dir.mkdir(exist_ok=True)
+            # os.system(f"ls -al {node_modules}")
+            # os.system(f"ls -al {self.node_dir}")
+
+            # cprint(f"current_node_dir {self.node_dir}", 'blue')
+            # cprint(f"node_modules {node_modules}", 'blue')
+            # cprint(f"tempdir {tempdir}",'blue')
+
+            # Commenting below line as of now, because it throws error if dir is already exists
+            # Which should not be the case.
+            # self.node_dir.mkdir(exist_ok=True)
 
             # install node dependencies 1 at a time to avoid race condition issues
             for dependency, version in deps_to_install.items():
+                cprint(f"npm install {dependency}@{version}",'blue')
                 spawn(f"npm install {dependency}@{version}", show=True, working_directory=tempdir)
 
-            shutil.rmtree(tempdir)
+                cprint("List of node_dir")
+                print(os.listdir(self.node_dir))
+                
+            # Commenting below line because symlink is created to temp directory and
+            # While deploying lambda it is trying to copy content from symlinked dir.
+            # shutil.rmtree(tempdir)
 
         else:
             raise RuntimeError("Unknown runtime: " + self.runtime)
@@ -217,6 +239,7 @@ class LambdaManifest(object):
 
         # check for files that are to be moved and link them
         for src, dst in self.source_files():
+            cprint(f"in loop src {src} dst {dst}")
             dst.parent.mkdir(parents=True, exist_ok=True)
 
             if not dst.exists():

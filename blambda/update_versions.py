@@ -50,7 +50,7 @@ def get_py_version(dep):
 def get_node_version(module):
     try:
         version = check_output(['npm', 'view', module, 'version'], universal_newlines=True).strip()
-        print("{}: {}".format(module, version))
+        print("node_version_check {}: {}".format(module, version))
         return module, version
     except Exception as e:
         cprint("{}: {}".format(module, str(e)), 'red')
