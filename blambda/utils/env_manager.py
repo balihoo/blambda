@@ -18,13 +18,15 @@ py36 = LambdaRuntime('python3.6', '3.6.1', 'blambda-3.6')
 py37 = LambdaRuntime('python3.7', '3.7.5', 'blambda-3.7')
 py38 = LambdaRuntime('python3.8', '3.8.1', 'blambda-3.8')
 py39 = LambdaRuntime('python3.9', '3.9.13', 'blambda-3.9')
+py40 = LambdaRuntime('python3.10', '3.10.4', 'blambda-3.10')
 
 runtimes = {
     py27.name: py27,
     py36.name: py36,
     py37.name: py37,
     py38.name: py38,
-    py39.name: py39
+    py39.name: py39,
+    py40.name: py40
 }
 
 DEFAULT_RUNTIME = py36
