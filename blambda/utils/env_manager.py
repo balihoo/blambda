@@ -17,16 +17,17 @@ py27 = LambdaRuntime('python2.7', '2.7.13', 'blambda-2.7')
 py36 = LambdaRuntime('python3.6', '3.6.1', 'blambda-3.6')
 py37 = LambdaRuntime('python3.7', '3.7.5', 'blambda-3.7')
 py38 = LambdaRuntime('python3.8', '3.8.1', 'blambda-3.8')
+py310 = LambdaRuntime('python3.10', '3.10.18', 'blambda-3.10')
 
 runtimes = {
     py27.name: py27,
     py36.name: py36,
     py37.name: py37,
-    py38.name: py38
+    py38.name: py38,
+    py310.name: py310
 }
 
-DEFAULT_RUNTIME = py36
-
+DEFAULT_RUNTIME = py310
 
 class EnvManager(object):
     def __init__(self, runtime):
