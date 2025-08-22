@@ -267,7 +267,9 @@ def publish(name, role, zipfile, options, dryrun):
     Returns:
          str: the arn of the new or updated function
     """
-    client = clients.lambda_client
+    client = boto3.client('lambda')
+    s3_client = boto3.client('s3')
+
     options.pop('name', None)
     sha = git_sha()
     mods = "!" * git_local_mods()
@@ -278,31 +280,36 @@ def publish(name, role, zipfile, options, dryrun):
 
     with open(zipfile, 'rb') as f:
         file_bytes = f.read()
-        print("Function Package: {} bytes".format(len(file_bytes)))
+        print("Function Package: {} bytes".format(len(file_bytes)))    
+
+    bucket_name = "balihoo-lambda-deployments-prod" 
+    s3_key = f"{name}-{sha}.zip"
+
     if not dryrun:
+        # Upload to S3
+        cprint(f"Uploading {zipfile} to s3://{bucket_name}/{s3_key}", 'yellow')
+        s3_client.upload_file(zipfile, bucket_name, s3_key)
+
         try:
+            # Update Lambda using S3
             cprint("Updating lambda function code", 'yellow')
             response = client.update_function_code(
                 FunctionName=name,
-                ZipFile=file_bytes
+                S3Bucket=bucket_name,
+                S3Key=s3_key
             )
-            
             time.sleep(5)
-
             cprint("Updating lambda function configuration", 'yellow')
             response = client.update_function_configuration(
                 FunctionName=name,
                 **options
             )
-        except ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceNotFoundException':
-                response = client.create_function(
-                    FunctionName=name,
-                    Code={'ZipFile': file_bytes},
-                    **options
-                )
-            else:
-                raise e
+        except client.exceptions.ResourceNotFoundException:
+            response = client.create_function(
+                FunctionName=name,
+                Code={'S3Bucket': bucket_name, 'S3Key': s3_key},
+                **options
+            )
         return response['FunctionName'], response['FunctionArn']
     return name, "DRYRUN"
 
