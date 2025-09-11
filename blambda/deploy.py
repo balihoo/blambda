@@ -255,7 +255,7 @@ def get_vpc_config(vpcid=None):
     }
 
 
-def publish(name, role, zipfile, options, dryrun):
+def publish(name, role, zipfile, options, dryrun, s3_bucket=None):
     """ publish a AWS Lambda function
     Args:
         name (str): name of the lambda function
@@ -283,7 +283,7 @@ def publish(name, role, zipfile, options, dryrun):
         file_bytes = f.read()
         print("Function Package: {} bytes".format(len(file_bytes)))    
 
-    bucket_name = "balihoo-lambda-deployments-prod-0" 
+    bucket_name = s3_bucket or "balihoo-lambda-deployments-prod-0"
     s3_key = f"{name}-{sha}.zip"
 
     if not dryrun:
@@ -327,7 +327,7 @@ def publish(name, role, zipfile, options, dryrun):
     return name, "DRYRUN"
 
 
-def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False):
+def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False, s3_bucket=None):
     """ deploys one or more functions to lambda
     Args:
         function_names (list(str)): list of function names
@@ -393,7 +393,7 @@ def deploy(function_names, env, prefix, override_role_arn, account, dryrun=False
             if role_arn:
                 # Publishing
                 with timed("publish"):
-                    (fullname, arn) = publish(function_name, role_arn, zipfile, manifest_data['options'], dryrun)
+                    (fullname, arn) = publish(function_name, role_arn, zipfile, manifest_data['options'], dryrun, s3_bucket=s3_bucket)
                 os.remove(zipfile)
 
                 # Schedule setup
@@ -429,6 +429,7 @@ def setup_parser(parser):
     parser.add_argument('--role', type=str, help='the arn of the IAM role to apply', default=None)
     parser.add_argument('--file', type=str, help='filename containing function names')
     parser.add_argument('--dryrun', '--dry-run', help='do not actually send anything to lambda', action='store_true')
+    parser.add_argument('--s3-bucket', type=str, help='S3 bucket to upload deployment package to', default=None)
 
 
 def run(args):
@@ -446,7 +447,7 @@ def run(args):
             print("  " + m.full_name)
         sys.exit(-1)
 
-    deployed = deploy(fnames, args.env, args.prefix, args.role, args.account, args.dryrun)
+    deployed = deploy(fnames, args.env, args.prefix, args.role, args.account, args.dryrun, s3_bucket=args.s3_bucket)
     if deployed != fnames:
         not_deployed = fnames - deployed
         if len(deployed) > 0:
