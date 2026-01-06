@@ -5,7 +5,7 @@ import json
 import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor
-from distutils.version import LooseVersion
+from packaging.version import Version
 from subprocess import check_output
 
 import os
@@ -32,7 +32,7 @@ def get_git_version(giturl):
 def get_pip_version(package_name):
     url = "https://pypi.python.org/pypi/{}/json".format(package_name)
     data = requests.get(url).json()
-    return sorted(list(data["releases"].keys()), key=LooseVersion, reverse=True)[0]
+    return sorted(data["releases"].keys(), key=Version, reverse=True)[0]
 
 
 def get_py_version(dep):
